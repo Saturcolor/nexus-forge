@@ -1,0 +1,28 @@
+# nexus-sync exclusions for the brain daemon (synced to /opt/llamacpp-daemon).
+# Goal: keep the diff to actual source — the brain holds a big venv + runtime
+# state we never want to push from the dev box.
+
+# Python env + caches (the brain builds its own venv from requirements.txt)
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# VCS / IDE / tooling
+.git/
+.claude/
+.idea/
+.vscode/
+
+# Runtime state on the brain — never overwrite from local
+config.yaml
+load_configs.json
+stats/
+memory/
+*.log
+logs/
+
+# Heavy / repro artifacts not part of the deployed daemon
+turbo3-repro/
+*.gguf
+*.zip

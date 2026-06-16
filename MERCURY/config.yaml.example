@@ -1,0 +1,247 @@
+# Mercury - Configuration
+# Copier en config.yaml et adapter. URLs des backends (Linux / macOS).
+#
+# Source de vérité : voir docs/model-routing.md pour le flux de routage et les options.
+#
+# Options "migrées en DB" : modifiables depuis le dashboard, persistées dans data/db.json (priorité sur ce fichier) :
+#   - Réglages : debug, debug_full_json, require_api_key, ollama_enabled, mlx_enabled, lm_studio_enabled,
+#     lm_studio_reasoning, models_cache_ttl_seconds, backend_timeout, queue_max_size,
+#     openrouter_enabled, openrouter_fallback_force, openrouter_fallback_model,
+#     toolcall15_enabled, toolcall15_url, bugfind15_enabled, bugfind15_url.
+#   - Données : users (clés API), model_mapping, model_routes, provider_priority, model_priority (voir exemples plus bas).
+#   - Clés en config uniquement (jamais en DB) : admin_token, openrouter_api_key, URLs backends.
+
+# Écoute sur toutes les interfaces (localhost + LAN + Tailscale)
+server_host: "0.0.0.0"
+server_port: 17890
+queue_max_size: 100
+
+# Token admin pour protéger les routes /admin/* (laisser vide = pas d'auth)
+admin_token: ""
+# Mode local-only (recommandé): désactive OpenRouter web (backend + fallback).
+local_only_mode: true
+# En local-only, autorise aussi les clés users[].api_key sur /admin/* (en plus de admin_token).
+admin_accept_user_api_key: true
+
+# Exiger une clé API utilisateur pour /v1/chat/completions et POST /api/chat : si true, 401 sans token ou token inconnu
+require_api_key: false
+
+# Mode debug : logger les JSON reçus, envoyés et transférés. Modifiable à chaud via le dashboard.
+debug: false
+# Logs debug : si true, les JSON ne sont pas tronqués (peut être très verbeux).
+debug_full_json: false
+# LM Studio : forcer le reasoning pour toutes les requêtes si le client ne l'envoie pas. Valeurs : "" (désactivé), "off", "low", "medium", "high", "on"
+lm_studio_reasoning: ""
+# LM Studio : modèles qui n'acceptent que "on" | "off" (pas low/medium/high). Ids côté LM Studio (ex. qwen/qwen3.5-9b).
+# Sinon, garder [] pour garder la granularité pour tous les modèles.
+# lm_studio_reasoning_on_off_only: [ "qwen/qwen3.5-9b" ]
+
+# Timeout des backends Ollama/MLX en secondes (par défaut 300)
+backend_timeout: 300
+
+# Activer/désactiver chaque backend (désactivé = invisible dans le dashboard et non routé)
+ollama_enabled: true
+mlx_enabled: true
+lm_studio_enabled: true
+# Mode proxy uniquement pour LM Studio : pas de traduction (body et réponse forwardés tels quels).
+# Si true, lm_studio_url doit pointer vers l'API OpenAI de LM Studio (suffixe /v1), ex. http://127.0.0.1:1234/v1
+lm_studio_proxy_only: false
+
+ollama_url: "http://localhost:11434"
+mlx_url: "http://localhost:8080"
+# Pour proxy only : utiliser l'URL avec /v1 (ex. http://127.0.0.1:1234/v1). Sinon ex. http://localhost:1234
+lm_studio_url: "http://localhost:1234"
+# Probe LM Studio : URL de la probe installée sur la machine hôte LM Studio (stats système + logs temps réel).
+# Si renseigné, GET /admin/lm-studio/probe renvoie les stats (CPU, RAM, température, prompt processing).
+# Ex. http://192.168.1.10:9090 (voir probe/README.md pour l'installation de la probe).
+lm_studio_probe_url: ""
+# Probe Ollama : URL de la probe installée sur la machine hôte Ollama (stats système + modèles chargés).
+# Si renseigné, GET /admin/ollama/probe renvoie les stats. La même probe peut servir LM Studio et Ollama (configurer ollama_url dans le config.yaml de la probe).
+# Ex. http://192.168.1.10:9090
+ollama_probe_url: ""
+
+# OpenRouter (provider web) : clé API standard (pas la clé OpenBill/credits). Pour chat et liste des modèles.
+openrouter_api_key: ""
+openrouter_enabled: false
+# Forcer le fallback : coché = modèles non matchés → OpenRouter (openrouter_fallback_model). Décoché = fallback seulement si aucun backend local activé.
+openrouter_fallback_force: false
+openrouter_fallback_model: ""
+
+# Anthropic via OAuth Claude Code : même authentification que l'extension VS Code / CLI.
+# Les credentials OAuth sont lus depuis ~/.claude/.credentials.json (créé par 'claude login').
+# Pour copier depuis l'extension VS Code : récupérer le fichier credentials de l'extension.
+# Fallback secondaire : utilisé si OpenRouter n'est pas configuré (ou après OpenRouter si les deux sont actifs).
+anthropic_enabled: false
+anthropic_fallback_model: "claude-sonnet-4-5"
+# anthropic_credentials_file: ""  # laisser vide = ~/.claude/.credentials.json automatique
+
+# Mapping nom canonique -> backend + id côté backend (prioritaire sur model_routes)
+# Le client envoie toujours le même format (ex. qwen/qwen2.5:9b) ; le middleware choisit le backend et l'id.
+# Si défini et non vide, `GET /api/tags` renvoie aussi la fusion avec le cache dynamique des backends activés.
+# Cache dynamique : analyse Ollama + LM Studio + MLX + llama.cpp (+ OpenRouter si activé/configuré), partagé pour /api/tags et routage.
+# Durée de vie du cache en secondes (0 = toujours rafraîchir à chaque GET /api/tags)
+models_cache_ttl_seconds: 60
+
+# Exemple model_mapping :
+# model_mapping:
+#   "qwen/qwen2.5:9b":
+#     backend: ollama
+#     backend_model_id: "qwen2.5:9b"
+#   "llama/llama3.2:3b":
+#     backend: lm_studio
+#     backend_model_id: "Llama-3.2-3B-GGUF"
+#   # Le client envoie "qwen/qwen3.5:9b" ; LM Studio expose un id exact (ex. qwen/qwen3.5-9b@q6_k).
+#   # Vérifier les ids avec : GET http://<lm_studio_url>/api/v1/models
+#   # Si Le client n'envoie pas reasoning dans le body, forcer via reasoning: on
+#   "qwen/qwen3.5:9b":
+#     backend: lm_studio
+#     backend_model_id: "qwen/qwen3.5-9b@q6_k"
+#     reasoning: on   # optionnel : "off" | "low" | "medium" | "high" | "on" (ou true/false)
+#     reasoning_on_off_only: true   # si ce modèle n'accepte que on/off (low→on, etc.)
+#   # OpenRouter : nom canonique openrouter/<id> (ex. openrouter/openai/gpt-4o)
+#   "openrouter/openai/gpt-4o":
+#     backend: openrouter
+#     backend_model_id: "openai/gpt-4o"
+model_mapping: {}
+
+# Règles de routage (si model_mapping vide ou modèle absent) : regex -> backend
+# La première règle qui matche gagne (ordre compte pour les regex)
+model_routes:
+  - pattern: "ollama/.*"
+    backend: "ollama"
+  - pattern: "mlx/.*"
+    backend: "mlx"
+  - pattern: "lm_studio/.*"
+    backend: "lm_studio"
+  - pattern: "llamacpp/.*"
+    backend: "llamacpp"
+
+# Users : clé API -> user_id et priorité (1 = plus prioritaire). Gestion depuis le dashboard.
+# Si require_api_key: true, les requêtes sans clé ou clé inconnue reçoivent 401.
+# Sinon : anonymous / unknown, priority 99
+users: []
+  # - api_key: "votre_cle_generee_depuis_le_dashboard"
+  #   user_id: "user1"
+  #   priority: 1
+  # - api_key: "autre_cle"
+  #   user_id: "user2"
+  #   priority: 2
+
+# Crédits providers (OPENBILL) : agrégation OpenRouter.ai, OpenAI, Anthropic
+# Clés à renseigner dans ce fichier (jamais exposées par l'API). Activer depuis le dashboard.
+credits:
+  enabled: true
+  timeout_ms: 30000
+  openrouter_key: ""
+  openai_key: ""
+  anthropic_key: ""
+  # Optionnel : snapshot pour calcul du restant (date YYYY-MM-DD + solde initial)
+  openai_balance_snapshot_date: "2026-01-01"
+  openai_balance_snapshot: "10.00"
+  anthropic_balance_snapshot_date: "2026-01-01"
+  anthropic_balance_snapshot: "10.00"
+
+# ── Benchmarks externes (ToolCall-15, BugFind-15) ────────────────────────────
+# Services Next.js proxy via Mercury. Les .env sont auto-générés via le dashboard.
+# Chaque service doit tourner sur son port (npm run start -- -p PORT).
+toolcall15_enabled: false
+toolcall15_url: "http://localhost:3015"
+bugfind15_enabled: false
+bugfind15_url: "http://localhost:3016"
+
+# ── Audio (STT / TTS) ─────────────────────────────────────────────────────────
+# Routes POST /v1/audio/transcriptions (STT) et POST /v1/audio/speech (TTS).
+# Le provider est choisi via le header X-Audio-Provider (openai|groq|elevenlabs).
+# Sans header, le provider par défaut ci-dessous est utilisé.
+
+# Provider par défaut si le header X-Audio-Provider est absent
+audio_default_stt_provider: "openai"   # openai | groq
+audio_default_tts_provider: "openai"   # openai | elevenlabs
+
+# OpenAI Audio (STT whisper-1 + TTS tts-1/tts-1-hd)
+audio_openai_enabled: false
+audio_openai_api_key: ""
+
+# Groq Audio (STT uniquement, whisper-large-v3-turbo, ultra rapide ~100ms)
+audio_groq_enabled: false
+audio_groq_api_key: ""
+
+# ElevenLabs Audio (TTS uniquement, eleven_multilingual_v2)
+audio_elevenlabs_enabled: false
+audio_elevenlabs_api_key: ""
+# Mapping nom de voix OpenAI → voice_id ElevenLabs.
+# NCM envoie "voice": "nova" (format OpenAI) ; Mercury traduit en voice_id.
+# Si le nom n'est pas dans la map, il est utilisé tel quel comme voice_id.
+# audio_elevenlabs_voice_map:
+#   nova: "21m00Tcm4TlvDq8ikWAM"
+#   onyx: "29vD33N1CtxCmqQRPOHJ"
+
+# Local Audio (daemon brain — Kokoro TTS + Faster Whisper STT)
+# Le daemon brain expose /audio/* avec les mêmes formats que les providers cloud.
+# URL = celle du daemon llamacpp (même service, même port).
+audio_local_enabled: false
+audio_local_url: ""    # ex: http://localhost:4321
+
+# OpenAI Realtime API (WebSocket bidirectionnel, modèle gpt-realtime-*)
+# Endpoint exposé: wss://<mercury>/v1/realtime?model=<model>
+# Réutilise audio_openai_api_key ci-dessus. Conso élevée (~$0.06/min audio in, ~$0.24/min audio out).
+# Consommé par NCM Interpreter en mode "Realtime ☁️".
+realtime_enabled: false
+
+# ── llama.cpp / brain-daemon ──────────────────────────────────────────────
+# llamacpp_enabled: true   # décommenter pour désactiver le backend llamacpp
+# llamacpp_url: "http://localhost:4321"
+
+# Répertoire des fichiers de chat template personnalisés (.jinja).
+# Un chemin relatif dans load.chat_template_file sera résolu sous ce répertoire.
+# llamacpp_chat_templates_dir: "~/mercury/chat-templates"
+
+# ── Quant module (proxy /quant/* vers brain-daemon) ───────────────────────
+quant_enabled: true
+
+# URL du brain-daemon. Par défaut http://127.0.0.1:4321 (co-localisé).
+# À changer SEULEMENT si brain-daemon tourne sur une autre machine.
+quant_brain_url: http://127.0.0.1:4321
+
+# Timeout pour les routes sync (scan, surgical/preview, job create, cancel,
+# log fetch). 60s suffit largement — toutes les routes sync sont légères.
+quant_timeout_sec: 60
+
+# Timeout pour /cartography (scan des poids d'un modèle, ~30-60s sur un 35B) et
+# pour /surgical/preview source=cartography. Défaut 600s si non spécifié.
+quant_cartography_timeout_sec: 600
+
+# Timeout pour les streams NDJSON /jobs/{id}/stream long-lived. Un quant
+# Q6_K sur 31B peut prendre 30+ min ; on met 2h pour marge.
+# Le brain émet un heartbeat toutes les 20s côté manager pour éviter le
+# timeout idle Caddy/reverse-proxy.
+quant_stream_timeout_sec: 7200
+
+# Whitelist des routes proxifiées — DEUX modes :
+#
+#   • Clé ABSENTE (recommandé) = mode défaut : routes exactes (_DEFAULT_ALLOWED,
+#     listées ci-dessous) PLUS les routes PARAMÉTRÉES matchées par regex
+#     (/imatrices/{name}, /jobs/{id}, /jobs/{id}/cancel, /jobs/{id}/log,
+#     /jobs/{id}/stream). C'est le SEUL mode qui autorise les routes paramétrées
+#     dont l'UI AtlasMind a besoin. Laisse cette clé commentée pour que l'UI marche.
+#
+#   • Clé PRÉSENTE = mode custom : EXACT-MATCH ONLY, aucun fallback regex — faut
+#     tout lister sinon 403. ATTENTION : les routes PARAMÉTRÉES ne sont PAS
+#     whitelistables ici, un `/jobs/{id}` littéral ne matchera jamais un vrai
+#     `/jobs/abc123`. N'active une liste custom que pour verrouiller sur le
+#     sous-ensemble de routes NON paramétrées ci-dessous — l'UI AtlasMind cessera
+#     alors de fonctionner (lecture jobs, stream, log, imatrix detail, cancel...).
+# quant_allowed_routes:
+#   - /health
+#   - /toolboxes
+#   - /models
+#   - /outputs
+#   - /calibrations
+#   - /imatrices
+#   - /presets/canonical
+#   - /family-catalog
+#   - /surgical/preview
+#   - /surgical/custom-preview
+#   - /validate-gguf
+#   - /cartography
+#   - /jobs

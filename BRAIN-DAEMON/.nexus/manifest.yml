@@ -1,0 +1,28 @@
+schema_version: 1
+name: mercury-daemon
+root: /opt/llamacpp-daemon
+target: <DEPLOY_HOST>   # override with your deployment hostname
+service: brain-daemon
+user: root
+depends_on: []
+
+stack:
+  python:
+    venv: venv
+    requirements: requirements.txt
+    entrypoint: daemon.py
+
+database:
+  engine: none
+
+healthcheck:
+  type: http
+  url: http://127.0.0.1:4321/health
+  timeout_sec: 90
+
+version:
+  file: VERSION
+
+preserve:
+  - config.yaml
+  - stats

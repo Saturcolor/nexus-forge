@@ -1,0 +1,56 @@
+{
+  "_comment": "Example load configurations for brain-daemon. Copy to load_configs.json and adapt to your models. Keys are model IDs as returned by /mgmt/models (relative to models_path in config.yaml). Use lmstudio-community/<repo>/<filename-without-.gguf> for HuggingFace models, or a custom subfolder name for locally-quantized models.",
+
+  "lmstudio-community/gemma-4-31B-it-GGUF/gemma-4-31B-it-Q6_K": {
+    "ctx_size": 96000,
+    "extra_args": [
+      "--cache-type-v", "q8_0",
+      "--cache-type-k", "q8_0",
+      "-tb", "16",
+      "-t", "16",
+      "-ub", "1024",
+      "-b", "2048",
+      "--parallel", "1",
+      "-ngl", "999",
+      "--kv-unified",
+      "-fa", "1",
+      "--mlock"
+    ],
+    "toolbox_name": "llama-vulkan-radv"
+  },
+
+  "lmstudio-community/Qwen3-8B-GGUF/Qwen3-8B-Q8_0": {
+    "ctx_size": 32768,
+    "extra_args": [
+      "--parallel", "2",
+      "-ngl", "999",
+      "-fa", "1"
+    ],
+    "toolbox_name": "llama-vulkan-radv",
+    "lucebox_draft": null,
+    "active_preset_id": null,
+    "active_preset_name": null,
+    "loras": []
+  },
+
+  "mercury/my-custom-model-Q6_K": {
+    "_comment": "Example for a locally-quantized model stored in <models_path>/mercury/. Replace 'my-custom-model-Q6_K' with your actual filename (without .gguf).",
+    "ctx_size": 65536,
+    "extra_args": [
+      "--parallel", "1",
+      "-ngl", "999",
+      "--kv-unified",
+      "-fa", "1"
+    ],
+    "toolbox_name": "native-vulkan",
+    "lucebox_draft": null,
+    "active_preset_id": null,
+    "active_preset_name": null,
+    "loras": [
+      {
+        "path": "/opt/llama-loras/my-persona-lora.gguf",
+        "scale": 0.8
+      }
+    ]
+  }
+}

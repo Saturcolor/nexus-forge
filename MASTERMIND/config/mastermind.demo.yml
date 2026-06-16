@@ -1,0 +1,78 @@
+# ============================================================
+# Mastermind — DEMO configuration
+# ============================================================
+# Boots the real backend against a local Postgres, with the LLM provider pointed
+# at the Mercury demo (MERCURY_DEMO_MODE) so an agent run flows end-to-end with a
+# canned reply — no real model, no GPU, no cloud key. See ../../DEMO.md.
+#
+#   MASTERMIND_CONFIG=config/mastermind.demo.yml npx tsx packages/backend/src/index.ts
+# ============================================================
+
+server:
+  port: 3000
+  host: 127.0.0.1
+  apiKey: demo-key
+
+paths:
+  # Absolute paths (the agents/shared-memory dirs must resolve identically across
+  # modules; a relative path would resolve against different bases). /tmp is an
+  # ephemeral scratch location for the demo — change it for a real deployment.
+  agentsDir: /tmp/mastermind-demo/agents
+  sharedMemoryDir: /tmp/mastermind-demo/shared-memory
+
+database:
+  host: 127.0.0.1
+  port: 5432
+  database: mastermind
+  user: mastermind
+  password: mastermind
+
+defaults:
+  model: local/demo
+  temperature: 0.7
+  maxContextTokens: 8192
+
+providers:
+  - id: local
+    type: openai-compat
+    # Point at the Mercury demo (section 1 of DEMO.md). Any OpenAI-compatible
+    # endpoint works here.
+    baseUrl: http://127.0.0.1:17890/v1
+    apiKey: demo
+    modelsUrl: http://127.0.0.1:17890/api/tags
+
+agents:
+  assistant:
+    workspaceDir: workspace-assistant
+    model: local/demo
+    temperature: 0.7
+    maxContextTokens: 8192
+    maxCompletionTokens: 2048
+    contextMessages: 10
+    tools:
+      systemAccess: false
+
+  researcher:
+    workspaceDir: workspace-researcher
+    model: local/demo
+    temperature: 0.5
+    maxContextTokens: 8192
+    maxCompletionTokens: 4096
+    contextMessages: 6
+    tools:
+      systemAccess: false
+
+# Disabled in demo: avoids the pgvector extension and embedding-dimension coupling.
+memoryStore:
+  enabled: false
+  embeddingDimensions: 16
+  autoInjection:
+    enabled: false
+    topK: 3
+    threshold: 0.45
+
+consolidation:
+  chat:
+    enabled: false
+  memory:
+    enabled: false

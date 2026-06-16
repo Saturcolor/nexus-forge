@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BRAIN-DAEMON — Backends & Configs</title>
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; background: #f7f6f2; color: #1a1a18; line-height: 1.5; }
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+.topbar { background: #fff; border-bottom: 0.5px solid rgba(0,0,0,0.12); padding: 10px 20px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; }
+.topbar-title { font-size: 14px; font-weight: 500; }
+.topbar-sub { font-size: 12px; color: #888780; }
+.topbar-chips { display: flex; gap: 5px; margin-left: auto; }
+.chip { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+.chip-tb { background: #EEEDFE; color: #3C3489; }
+.chip-na { background: #E1F5EE; color: #0F6E56; }
+.chip-mo { background: #F1EFE8; color: #5F5E5A; }
+.content { padding: 16px 20px; max-width: 980px; margin: 0 auto; width: 100%; }
+.tabs { display: flex; gap: 0; margin-bottom: 16px; border-bottom: 0.5px solid rgba(0,0,0,0.1); flex-wrap: wrap; }
+.tab { padding: 7px 12px; font-size: 12px; font-weight: 500; color: #888780; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -0.5px; user-select: none; white-space: nowrap; }
+.tab:hover { color: #1a1a18; }
+.tab.active { color: #1a1a18; border-bottom-color: #1a1a18; }
+.tab-sep { width: 0.5px; background: rgba(0,0,0,0.08); margin: 6px 3px; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.card { background: #fff; border: 0.5px solid rgba(0,0,0,0.1); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+.card.hi { border: 2px solid #1D9E75; }
+.badge { font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 500; display: inline-block; }
+.b-tb { background: #EEEDFE; color: #3C3489; }
+.b-na { background: #E1F5EE; color: #0F6E56; }
+.b-act { background: #1D9E75; color: #fff; }
+.b-fork { background: #FAEEDA; color: #633806; }
+.b-pr { background: #E6F1FB; color: #185FA5; }
+.b-hip { background: #FCEBEB; color: #A32D2D; }
+.b-vllm { background: #EEEDFE; color: #3C3489; }
+.b-warn { background: #FAEEDA; color: #633806; }
+.card-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+.card-name { font-size: 15px; font-weight: 500; }
+.card-path { font-size: 11px; color: #888780; font-family: monospace; margin-top: 1px; }
+.card-src { font-size: 11px; color: #5F5E5A; margin-top: 2px; }
+.pg { display: grid; grid-template-columns: 145px 1fr; gap: 3px 10px; }
+.pl { font-size: 11px; color: #888780; padding: 3px 0; }
+.pv { font-size: 12px; padding: 3px 0; }
+.pv.m { font-family: monospace; font-size: 11px; color: #5F5E5A; word-break: break-all; }
+.pill { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; margin: 1px 2px 1px 0; }
+.p-ok { background: #EAF3DE; color: #3B6D11; }
+.p-no { background: #F1EFE8; color: #5F5E5A; }
+.p-warn { background: #FAEEDA; color: #633806; }
+.p-bug { background: #FCEBEB; color: #A32D2D; }
+.p-blu { background: #E6F1FB; color: #185FA5; }
+.p-pur { background: #EEEDFE; color: #3C3489; }
+.cb { background: #f4f3ef; border: 0.5px solid rgba(0,0,0,0.08); border-radius: 6px; padding: 9px 11px; font-family: monospace; font-size: 11px; line-height: 1.7; margin: 7px 0; white-space: pre-wrap; word-break: break-all; position: relative; }
+.cp { position: absolute; top: 5px; right: 7px; font-size: 10px; padding: 2px 7px; border-radius: 4px; background: rgba(0,0,0,0.06); border: none; cursor: pointer; color: #5F5E5A; }
+.cp:hover { background: rgba(0,0,0,0.1); }
+.al { border-radius: 6px; padding: 8px 12px; font-size: 12px; margin: 8px 0; }
+.al-warn { background: #FAEEDA; border: 0.5px solid #BA7517; color: #633806; }
+.al-info { background: #E6F1FB; border: 0.5px solid #378ADD; color: #185FA5; }
+.al-ok   { background: #EAF3DE; border: 0.5px solid #639922; color: #3B6D11; }
+.al-bug  { background: #FCEBEB; border: 0.5px solid #E24B4A; color: #A32D2D; }
+.sec { font-size: 11px; font-weight: 500; color: #888780; text-transform: uppercase; letter-spacing: 0.05em; margin: 18px 0 7px; }
+.gl { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 9px; border-radius: 4px; margin: 16px 0 8px; display: inline-block; }
+.g-tb { background: #EEEDFE; color: #3C3489; }
+.g-na { background: #E1F5EE; color: #0F6E56; }
+
+/* Table */
+table.t { width: 100%; border-collapse: collapse; font-size: 11px; }
+table.t th { font-size: 10px; font-weight: 500; color: #888780; text-align: left; padding: 7px 8px; border-bottom: 0.5px solid rgba(0,0,0,0.1); background: #f7f6f2; white-space: nowrap; }
+table.t td { padding: 6px 8px; border-bottom: 0.5px solid rgba(0,0,0,0.05); vertical-align: top; }
+table.t tr:hover td { background: #f9f8f5; }
+table.t td.nm { font-weight: 500; font-size: 11px; }
+table.t tr.gr td { background: #f2f1ed; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #888780; padding: 5px 8px 4px; border-bottom: 0.5px solid rgba(0,0,0,0.08); }
+
+/* Model filter */
+.filter-bar { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+.filter-bar input { flex: 1; min-width: 160px; padding: 5px 9px; border: 0.5px solid rgba(0,0,0,0.15); border-radius: 6px; font-size: 12px; background: #fff; }
+.filter-bar input:focus { outline: none; border-color: rgba(0,0,0,0.3); }
+.fb-btn { font-size: 11px; padding: 4px 10px; border-radius: 6px; border: 0.5px solid rgba(0,0,0,0.15); background: #fff; cursor: pointer; color: #5F5E5A; }
+.fb-btn.active { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+.fb-btn:hover:not(.active) { background: #f4f3ef; }
+
+/* Notes */
+.nl { list-style: none; }
+.nl li { padding: 7px 0; border-bottom: 0.5px solid rgba(0,0,0,0.06); font-size: 12px; display: flex; gap: 10px; align-items: flex-start; }
+.nl li:last-child { border-bottom: none; }
+.nd { font-size: 11px; color: #888780; white-space: nowrap; flex-shrink: 0; padding-top: 1px; min-width: 90px; }
+.ut { font-size: 10px; padding: 1px 6px; border-radius: 3px; background: #EEEDFE; color: #3C3489; margin-right: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+<div class="topbar">
+  <div>
+    <div class="topbar-title">BRAIN-DAEMON — Backends</div>
+    <div class="topbar-sub">config.yaml · updater/routes.py · load_configs.json</div>
+  </div>
+  <div class="topbar-chips">
+    <span class="chip chip-tb">3 toolbox</span>
+    <span class="chip chip-na">4 natifs</span>
+    <span class="chip chip-mo">60 modèles</span>
+  </div>
+</div>
+<div class="content">
+
+<div class="tabs">
+  <div class="tab active" onclick="sw('overview')">Vue d'ensemble</div>
+  <div class="tab-sep"></div>
+  <div class="tab" onclick="sw('models')">Modèles (60)</div>
+  <div class="tab-sep"></div>
+  <div class="tab" onclick="sw('tb-vulkan')">🟣 vulkan</div>
+  <div class="tab" onclick="sw('tb-rocm')">🟣 rocm</div>
+  <div class="tab" onclick="sw('tb-vllm')">🟣 vllm-rocm</div>
+  <div class="tab-sep"></div>
+  <div class="tab" onclick="sw('na-vulkan')">🟢 native-vulkan</div>
+  <div class="tab" onclick="sw('na-turboquant')">🟢 turboquant</div>
+  <div class="tab" onclick="sw('na-mtp')">🟢 native-mtp</div>
+  <div class="tab" onclick="sw('na-lucebox')">🟢 lucebox</div>
+  <div class="tab-sep"></div>
+  <div class="tab" onclick="sw('notes')">Notes & bugs</div>
+  <div class="tab-sep"></div>
+  <div class="tab" onclick="sw('versions')">📌 Versions</div>
+</div>
+
+<!-- ═══════════ OVERVIEW ═══════════ -->
+<div id="tab-overview" class="tab-content active">
+  <div class="al al-info" style="margin-bottom:14px;">
+    <strong>Défaut daemon</strong> — API call sans champ <code>backend</code> → toolbox <code>vulkan</code>. En pratique, la majorité des modèles actifs est explicitement sur <strong>native-vulkan</strong> dans load_configs.json.
+  </div>
+
+  <div class="gl g-tb">Toolbox — conteneurisés via toolbox/podman · images kyuz0 Docker Hub</div>
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+    <table class="t">
+      <thead><tr><th>Clé backend</th><th>Toolbox name</th><th>Image upstream</th><th>Driver</th><th>Modèles</th><th>Rebuild</th><th>Statut</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">vulkan</td><td style="font-family:monospace;font-size:10px;">llama-vulkan-radv</td><td style="font-family:monospace;font-size:10px;">kyuz0/..:vulkan-radv</td><td>Vulkan RADV</td><td>GGUF</td><td>Pull auto</td><td><span class="pill p-ok">stable</span></td></tr>
+        <tr><td class="nm">rocm</td><td style="font-family:monospace;font-size:10px;">llama-rocm-7.2</td><td style="font-family:monospace;font-size:10px;">kyuz0/..:rocm-7.2</td><td>ROCm 7.2</td><td>GGUF</td><td>Pull auto</td><td><span class="pill p-ok">+5-10% imatrix</span></td></tr>
+        <tr><td class="nm">vllm-rocm</td><td style="font-family:monospace;font-size:10px;">vllm</td><td style="font-family:monospace;font-size:10px;">kyuz0/vllm-therock-gfx1151:stable</td><td>ROCm HIP</td><td>HF safetensors</td><td>Pull OK<br><span class="pill p-warn">Build: pas de Dockerfile</span></td><td><span class="pill p-blu">vLLM engine</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="gl g-na">Natifs — builds llama.cpp directement sur le brain · /opt/llama-native*</div>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table class="t">
+      <thead><tr><th>Clé backend</th><th>Binaire</th><th>Source</th><th>MTP/Spec</th><th>Draft</th><th>KV quant</th><th>Rebuild</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">native-vulkan<br><span style="font-weight:400;color:#888780;font-size:10px;">défaut pratique · MTP inclus</span></td><td style="font-family:monospace;font-size:10px;">/opt/llama-native</td><td>llama.cpp master</td><td><span class="pill p-ok">--spec-type mtp</span> <span style="font-size:10px;color:#888780;">(PR #22673 mergée)</span></td><td>Embarqué dans GGUF</td><td>f16 / q8_0</td><td>BrainPanel auto</td></tr>
+        <tr style="background:#f9fff8;"><td class="nm">native-turboquant<br><span style="font-weight:400;color:#0F6E56;font-size:10px;">actif · Gemma4</span></td><td style="font-family:monospace;font-size:10px;">/opt/llama-native-turboquant</td><td>AtomicBot-ai fork</td><td><span class="pill p-ok">--mtp-head (GGUF ext.)</span></td><td>gemma-4-31B-it assistant.Q4_K_M.gguf</td><td>turbo3/4 <span class="pill p-bug">bug Gemma4+turbo3</span></td><td>Manuel</td></tr>
+        <tr><td class="nm">native-lucebox<br><span style="font-weight:400;color:#A32D2D;font-size:10px;">HIP DFlash · actif</span></td><td style="font-family:monospace;font-size:10px;">/usr/bin/python3 → server.py</td><td>Luce-Org/lucebox-hub</td><td><span class="pill p-pur">DFlash (block-diff.)</span></td><td>safetensors séparé (Qwen3.6-27B-DFlash)</td><td>f16/q8/q4/tq3…</td><td>Manuel</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">Différence clé — source du draft / spec decode</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+    <div class="card"><div style="font-size:10px;color:#888780;margin-bottom:5px;">turboquant · native-vulkan (MTP)</div><div style="font-size:12px;">GGUF <strong>externe</strong> <code style="font-size:10px;">--mtp-head</code> (turboquant) ou <strong>embarqué dans le GGUF</strong> <code style="font-size:10px;">--spec-type mtp</code> (native-vulkan)</div></div>
+    <div class="card"><div style="font-size:10px;color:#888780;margin-bottom:5px;">lucebox</div><div style="font-size:12px;"><strong>safetensors séparé</strong> — architecture DFlash ≠ MTP, ROCm HIP</div></div>
+    <div class="card" style="background:#f9fff8;border-color:#C8EAD8;"><div style="font-size:10px;color:#0F6E56;margin-bottom:5px;">✅ MTP dans master depuis b9139</div><div style="font-size:12px;">PR #22673 mergée 12 mai. <code style="font-size:10px;">native-vulkan</code> supporte désormais <code style="font-size:10px;">--spec-type mtp</code> nativement.</div></div>
+  </div>
+</div>
+
+<!-- ═══════════ MODELS ═══════════ -->
+<div id="tab-models" class="tab-content">
+  <div class="filter-bar">
+    <input type="text" id="mfilter" placeholder="Filtrer par nom, backend, quant…" oninput="filterModels()">
+    <button class="fb-btn active" onclick="filterBy('all',this)">Tout</button>
+    <button class="fb-btn" onclick="filterBy('toolbox',this)">🟣 Toolbox</button>
+    <button class="fb-btn" onclick="filterBy('native-vulkan',this)">🟢 native-vulkan</button>
+    <button class="fb-btn" onclick="filterBy('native-turboquant',this)">🟢 turboquant</button>
+    <button class="fb-btn" onclick="filterBy('lucebox',this)">🟢 lucebox</button>
+    <button class="fb-btn" onclick="filterBy('vllm-rocm',this)">🟣 vllm</button>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table class="t" id="mtable">
+      <thead><tr><th>Modèle</th><th>Quant</th><th>Backend</th><th>Ctx</th><th>KV</th><th>Flags notables</th></tr></thead>
+      <tbody id="mtbody"></tbody>
+    </table>
+  </div>
+  <div style="font-size:11px;color:#888780;margin-top:8px;" id="mcount"></div>
+</div>
+
+<!-- ═══════════ TOOLBOX VULKAN ═══════════ -->
+<div id="tab-tb-vulkan" class="tab-content">
+  <div class="card">
+    <div class="card-head"><span class="badge b-tb" style="margin-top:2px;">toolbox</span><div>
+      <div class="card-name">vulkan (llama-vulkan-radv)</div>
+      <div class="card-path">docker.io/kyuz0/amd-strix-halo-toolboxes:vulkan-radv</div>
+      <div class="card-src">Config key : toolbox_name · clé API : "vulkan" · défaut API si non spécifié</div>
+    </div></div>
+    <div class="pg">
+      <span class="pl">Toolbox name</span><span class="pv m">llama-vulkan-radv</span>
+      <span class="pl">Image locale</span><span class="pv m">localhost/llama-vulkan-radv:local</span>
+      <span class="pl">Dockerfile</span><span class="pv m">brain tools/amd-strix-halo-toolboxes/toolboxes/Dockerfile.vulkan-radv</span>
+      <span class="pl">Args podman</span><span class="pv m">--device /dev/dri --group-add video --security-opt seccomp=unconfined</span>
+      <span class="pl">Utilisé par</span><span class="pv">~36 modèles (ancien stock + petits modèles)</span>
+    </div>
+  </div>
+  <div class="sec">Args recommandés</div>
+  <div class="cb" id="cb1">-ngl 999 -fa 1 --no-mmap<button class="cp" onclick="cp('cb1')">copier</button></div>
+</div>
+
+<!-- ═══════════ TOOLBOX ROCM ═══════════ -->
+<div id="tab-tb-rocm" class="tab-content">
+  <div class="card">
+    <div class="card-head"><span class="badge b-tb" style="margin-top:2px;">toolbox · rocm</span><div>
+      <div class="card-name">rocm (llama-rocm-7.2)</div>
+      <div class="card-path">docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-7.2</div>
+      <div class="card-src">Config key : toolbox_rocm_name · clé API : "rocm"</div>
+    </div></div>
+    <div class="pg">
+      <span class="pl">Toolbox name</span><span class="pv m">llama-rocm-7.2</span>
+      <span class="pl">Args podman</span><span class="pv m">--device /dev/dri --device /dev/kfd --group-add video --group-add render --group-add sudo --security-opt seccomp=unconfined</span>
+      <span class="pl">Avantage</span><span class="pv">+5-10% sur imatrix. Génération identique (CPU-bound). Utile pour brain-quant.</span>
+    </div>
+  </div>
+  <div class="al al-info">Workaround ROCm 7 compiler regression appliqué dans la toolbox (<code>-mllvm --amdgpu-unroll-threshold-local=600</code>).</div>
+</div>
+
+<!-- ═══════════ TOOLBOX VLLM ═══════════ -->
+<div id="tab-tb-vllm" class="tab-content">
+  <div class="card">
+    <div class="card-head"><span class="badge b-vllm" style="margin-top:2px;">toolbox · vllm</span><div>
+      <div class="card-name">vllm-rocm</div>
+      <div class="card-path">docker.io/kyuz0/vllm-therock-gfx1151:stable</div>
+      <div class="card-src">Config key : toolbox_vllm_name · clé API : "vllm-rocm" · backend_type : "vllm-toolbox"</div>
+    </div></div>
+    <div class="pg">
+      <span class="pl">Toolbox name</span><span class="pv m">vllm</span>
+      <span class="pl">Engine</span><span class="pv">vLLM — charge HF safetensors directement, pas GGUF</span>
+      <span class="pl">Dockerfile</span><span class="pv">Pas vendoré — repo séparé kyuz0. Pull marche, Build erreurera.</span>
+      <span class="pl">version_cmd</span><span class="pv m">vllm --version</span>
+    </div>
+  </div>
+  <div class="sec">Modèle en production — QuantTrio/gemma-4-31B-it-AWQ</div>
+  <div class="cb" id="cb-vllm-awq">--quantization awq_marlin \
+--enforce-eager \
+--max-num-seqs 1 \
+--max-num-batched-tokens 2048 \
+--no-enable-prefix-caching \
+--kv-cache-dtype fp8 \
+--num-gpu-blocks-override 600 \
+--gpu-memory-utilization 0.5 \
+--limit-mm-per-prompt '{"image": 0, "video": 0}' \
+--speculative-config '{"method": "ngram", "num_speculative_tokens": 4, "prompt_lookup_max": 4}'<button class="cp" onclick="cp('cb-vllm-awq')">copier</button></div>
+  <div class="al al-info">env_vars : <code>PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True</code></div>
+</div>
+
+<!-- ═══════════ NATIVE-VULKAN ═══════════ -->
+<div id="tab-na-vulkan" class="tab-content">
+  <div class="card">
+    <div class="card-head"><span class="badge b-na" style="margin-top:2px;">natif · défaut pratique</span><div>
+      <div class="card-name">native-vulkan</div>
+      <div class="card-path">/opt/llama-native/bin/llama-server</div>
+      <div class="card-src">llama.cpp master · build via build-native.sh · clé API : "native-vulkan"</div>
+    </div></div>
+    <div class="pg">
+      <span class="pl">Prefix</span><span class="pv m">/opt/llama-native</span>
+      <span class="pl">Build info</span><span class="pv m">/opt/llama-native/BUILD_INFO</span>
+      <span class="pl">Backup</span><span class="pv m">/opt/llama-native/bin/llama-server.bak</span>
+      <span class="pl">Rebuild</span><span class="pv">BrainPanel auto (pas de --pr → master)</span>
+    </div>
+  </div>
+  <div class="sec">Configs actives notables</div>
+  <div class="al al-ok" style="margin-bottom:10px;">✅ <strong>MTP inclus depuis b9139</strong> — PR #22673 mergée 12 mai 2026. Utiliser <code>--spec-type mtp</code> directement sur native-vulkan avec un GGUF MTP-capable. Decode ×1.85 sur Qwen3.6-27B, prefill ×0.51, +2.49 GiB VRAM. Bug #22867 : image input + MTP = boucle infinie.</div>
+  <div class="sec">Template MTP (sur native-vulkan)</div>
+  <div class="cb" id="cb-mtp-nv">-ngl 999 -fa 1 --no-mmap \
+--spec-type mtp --spec-draft-n-max 3<button class="cp" onclick="cp('cb-mtp-nv')">copier</button></div>
+  <div class="sec">Config active — Qwen3.6-27B-Q8_0-mtp (migré depuis native-mtp · ctx 90k)</div>
+  <div class="cb" id="cb-mtp-live">--cache-type-v q8_0 --cache-type-k q8_0 \
+-tb 16 -t 16 --parallel 1 -ngl 999 \
+--ctx-checkpoints 12 --cache-ram 4096 \
+--no-cache-idle-slots --mlock --no-mmap --jinja -fa 1 \
+--spec-type mtp --spec-draft-n-max 3 -np 1<button class="cp" onclick="cp('cb-mtp-live')">copier</button></div>
+  <div class="sec">Config active — Qwen3-Embedding-8B (protected · embedding)</div>
+  <div class="cb" id="cb-emb">--cache-type-v q8_0 --cache-type-k q8_0 \
+-ub 8192 -b 8192 --parallel 2 -ngl 999 \
+--ctx-checkpoints 1 --cache-ram 0 --no-cache-idle-slots \
+--mlock --no-mmap -fa 1 \
+--embedding --pooling last<button class="cp" onclick="cp('cb-emb')">copier</button></div>
+  <div style="font-size:12px;color:#5F5E5A;margin:10px 0 6px;">Qwen3.6-35B-Uncensored (ctx-checkpoints 12 · jinja)</div>
+  <div class="cb" id="cb-q36-35">--cache-type-v q8_0 --cache-type-k q8_0 \
+-tb 8 -t 8 --parallel 1 -ngl 999 \
+--ctx-checkpoints 12 --cache-ram 4096 \
+--mlock --kv-unified --no-mmap --jinja -fa 1 --poll 100<button class="cp" onclick="cp('cb-q36-35')">copier</button></div>
+</div>
+
+<!-- ═══════════ TURBOQUANT ═══════════ -->
+<div id="tab-na-turboquant" class="tab-content">
+  <div class="card hi">
+    <div class="card-head"><span class="badge b-act" style="margin-top:2px;">actif · Gemma4 MTP</span><div>
+      <div class="card-name">native-turboquant</div>
+      <div class="card-path">/opt/llama-native-turboquant/bin/llama-server</div>
+      <div class="card-src">AtomicBot-ai/atomic-llama-cpp-turboquant · clé API : "native-turboquant"</div>
+    </div></div>
+    <div class="pg">
+      <span class="pl">Spécialité</span><span class="pv">TurboQuant KV (turbo3/4) + Gemma 4 MTP via <code style="font-size:10px;">--mtp-head</code> externe</span>
+      <span class="pl">MTP head</span><span class="pv m">/opt/llama-native-turboquant/share/assistants/gemma-4-31B-it-assistant.Q4_K_M.gguf</span>
+      <span class="pl">Rebuild</span><span class="pv">Manuel uniquement via <code style="font-size:10px;">bash /tmp/install-turboquant.sh</code>. BrainPanel ne peut pas (clone le mauvais repo).</span>
+    </div>
+  </div>
+  <div class="al al-ok"><strong>Fix 13 mai (b9019)</strong> — cache-reuse + TTFT Gemma 4 corrigés dans ce rebuild. <code>-ctk turbo3</code> sur Gemma 4 à retester — le bug ISWA/Vulkan était peut-être lié, à revalider.</div>
+  <div class="sec">Config active — mercury/gemma-4-31b-abliterated-brain-Q_C6v2_BRAIN (protected)</div>
+  <div class="cb" id="cb-tq">-ngld 999 --draft-block-size 3 \
+--mtp-head /opt/llama-native-turboquant/share/assistants/gemma-4-31B-it-assistant.Q4_K_M.gguf \
+--spec-type mtp \
+--cache-type-v q8_0 --cache-type-k q8_0 \
+-tb 16 -t 16 --parallel 1 -ngl 999 \
+--ctx-checkpoints 4 --cache-ram 2048 \
+--mlock --kv-unified --no-mmap -fa 1 --poll 100<button class="cp" onclick="cp('cb-tq')">copier</button></div>
+  <div class="sec">Template Gemma 4 (avec KV f16)</div>
+  <div class="cb" id="cb-tq-t">-ngl 999 -fa 1 --no-mmap -ctk f16 \
+--mtp-head /opt/llama-native-turboquant/share/assistants/gemma-4-31B-it-assistant.Q4_K_M.gguf \
+--spec-type mtp --draft-block-size 3 -ngld 999<button class="cp" onclick="cp('cb-tq-t')">copier</button></div>
+</div>
+
+<!-- ═══════════ LUCEBOX ═══════════ -->
+<div id="tab-na-lucebox" class="tab-content">
+  <div class="card">
+    <div class="card-head"><span class="badge b-hip" style="margin-top:2px;">natif · HIP DFlash · actif</span><div>
+      <div class="card-name">native-lucebox</div>
+      <div class="card-path">/usr/bin/python3 → /opt/lucebox/dflash/scripts/server.py</div>
+      <div class="card-src">Luce-Org/lucebox-hub · gfx1151 HIP · clé API : "native-lucebox"</div>
+    </div></div>
+    <div class="pg">
+      <span class="pl">Architecture</span><span class="pv">DFlash spec decode (block-diffusion + DDTree verify) ≠ MTP</span>
+      <span class="pl">Driver</span><span class="pv">HIP ROCm natif, pas Vulkan (rocWMMA Phase 2)</span>
+      <span class="pl">Draft requis</span><span class="pv m">~/.lmstudio/models/example-org/Qwen3.6-27B-DFlash/model.safetensors</span>
+      <span class="pl">KV cache</span><span class="pv">Géré par Lucebox — ne jamais passer <code>--slot-save-path</code></span>
+    </div>
+  </div>
+  <div class="sec">Config active — mercury/Qwen3.6-27B-Uncensored-brain-Q_8C_BRAIN (ctx 128k)</div>
+  <div class="cb" id="cb-luce-live">--budget 8 \
+--cache-type-k q8_0 \
+--fa-window 128000<button class="cp" onclick="cp('cb-luce-live')">copier</button></div>
+  <div class="al al-info">Chaque modèle peut partager le même slot lucebox mais définit son propre <code>lucebox_draft</code> dans load_configs.json.</div>
+</div>
+
+<!-- ═══════════ NOTES ═══════════ -->
+<div id="tab-notes" class="tab-content">
+  <div class="sec">Bugs actifs</div>
+  <ul class="nl">
+    <li><span class="nd">turboquant</span><span><span class="pill p-ok">fix 13 mai</span> Fix cache-reuse + TTFT Gemma 4 dans rebuild b9019. <code>-ctk turbo3</code> toujours à tester sur Gemma 4 après update — comportement à revalider.</span></li>
+    <li><span class="nd">MTP #22867</span><span><span class="pill p-bug">bug</span> Image input + <code>--spec-type mtp</code> = boucle infinie. Ne pas mixer multimodal + MTP (affecte native-vulkan).</span></li>
+    <li><span class="nd">MTP perf</span><span><span class="pill p-warn">perf</span> Prefill Vulkan ~×0.5 vs CUDA. Génération ×1.85-1.9. Net positif seulement pour prompts courts interactifs.</span></li>
+  </ul>
+  <div class="sec">Notes ops</div>
+  <ul class="nl">
+    <li><span class="nd">global</span><span>Toujours <code>-fa 1 --no-mmap</code> sur tous les backends Strix Halo. Sans ça : crashes gfx1151.</span></li>
+    <li><span class="nd">turboquant rebuild</span><span>BrainPanel ne peut pas rebuild turboquant — clone le mauvais repo. Manuel uniquement via <code>bash /tmp/install-turboquant.sh</code>.</span></li>
+    <li><span class="nd">vllm-rocm build</span><span>Dockerfile pas vendoré dans brain-daemon. Pull upstream marche, Build BrainPanel erreurera.</span></li>
+    <li><span class="nd">lucebox KV</span><span>Lucebox gère son propre KV. Ne jamais passer <code>--slot-save-path</code>.</span></li>
+    <li><span class="nd">MTP dans master</span><span><span class="pill p-ok">MERGED 12 mai 2026</span> PR #22673 absorbée dans master. Slot native-mtp retiré — native-vulkan (b9139+) supporte <code>--spec-type mtp</code> directement. Modèles MTP à pointer sur backend "native-vulkan" dans load_configs.json.</span></li>
+    <li><span class="nd">default API</span><span>API call sans champ <code>backend</code> → "vulkan" (toolbox). En pratique tous les mercury récents ont un <code>backend</code> explicite dans load_configs.json.</span></li>
+  </ul>
+  <div class="sec">Journal</div>
+  <ul class="nl">
+    <li><span class="nd">2026-05-13</span><span><span class="ut">v5</span> Turboquant rebuild 21h21 — b9019 (0a635dcd9), fix Gemma 4 cache-reuse + TTFT, <code>--spec-type mtp/nextn/eagle3</code> inclus. Snapshot mis à jour. Annulation erreur "PR #22673 mergée" (source WebSearch incorrecte, vérifiée sur GitHub : toujours Draft).</span></li>
+    <li><span class="nd">2026-05-13</span><span><span class="ut">v4</span> Check repos natifs. Lucebox très actif (Qwen3.6-27B-DFlash, pflash, DDTree, 2033 commits).</span></li>
+    <li><span class="nd">2026-05-13</span><span><span class="ut">v3</span> Lecture load_configs.json : 60 modèles, tous backends en prod. Onglet modèles + configs réelles. Correction défaut = native-vulkan en pratique.</span></li>
+    <li><span class="nd">2026-05-13</span><span><span class="ut">v2</span> Correction structure : 3 toolbox (vulkan/rocm/vllm-rocm) + 4 natifs.</span></li>
+    <li><span class="nd">2026-05-13</span><span><span class="ut">init</span> Première cartographie depuis config.yaml + updater/routes.py.</span></li>
+  </ul>
+</div>
+
+<!-- ═══════════ VERSIONS ═══════════ -->
+<div id="tab-versions" class="tab-content">
+  <div class="al al-info" style="margin-bottom:14px;">
+    Snapshot du <strong>13 mai 2026</strong>. Mettre à jour ici après chaque rebuild ou pull pour tracker les deltas.
+  </div>
+
+  <div class="sec">Infrastructure GPU</div>
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+    <table class="t">
+      <thead><tr><th>Composant</th><th>Version</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">ROCm</td><td style="font-family:monospace;">7.2.3</td></tr>
+        <tr><td class="nm">GPU backend</td><td>Vulkan radv (AMD RDNA) + HIP (ROCm)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">Toolbox backends</div>
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+    <table class="t">
+      <thead><tr><th>Backend</th><th>Build #</th><th>Commit</th><th>Snapshot</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="nm">🟣 llama-vulkan-radv</td>
+          <td style="font-family:monospace;">9139</td>
+          <td style="font-family:monospace;">527045bfb</td>
+          <td style="white-space:nowrap;">13 mai 2026</td>
+          <td><span class="pill p-ok">stable</span></td>
+        </tr>
+        <tr>
+          <td class="nm">🟣 llama-rocm-7.2</td>
+          <td style="font-family:monospace;">8738</td>
+          <td style="font-family:monospace;">d6f303004</td>
+          <td style="white-space:nowrap;">13 mai 2026</td>
+          <td><span class="pill p-ok">stable</span> <span style="font-size:11px;color:#888780;">build en retard de 401 builds vs vulkan</span></td>
+        </tr>
+        <tr>
+          <td class="nm">🟣 vllm</td>
+          <td style="font-family:monospace;" colspan="2">0.19.2rc1.dev113+g6aa057c9d</td>
+          <td style="white-space:nowrap;">22 avr 2026</td>
+          <td><span class="pill p-pur">rc1</span> <span style="font-size:11px;color:#888780;">rocm713</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">Natifs llama.cpp</div>
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+    <table class="t">
+      <thead><tr><th>Backend</th><th>Build #</th><th>Commit</th><th>Date build</th><th>Statut</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="nm">🟢 native-vulkan</td>
+          <td style="font-family:monospace;">b9139</td>
+          <td style="font-family:monospace;">527045bf</td>
+          <td style="white-space:nowrap;">13 mai 2026</td>
+          <td><span class="pill p-ok">stable · actif</span> <span class="pill p-ok">MTP inclus</span> PR #22673 mergée → <code>--spec-type mtp</code> dispo nativement</td>
+        </tr>
+        <tr>
+          <td class="nm">🟢 native-turboquant</td>
+          <td style="font-family:monospace;">b9019</td>
+          <td style="font-family:monospace;">0a635dcd9</td>
+          <td style="white-space:nowrap;">13 mai 2026 21h21</td>
+          <td><span class="pill p-ok">à jour</span> TurboQuant KV — <code style="font-size:10px;">-ctk turbo2/3/4</code> + <code style="font-size:10px;">--spec-type mtp/nextn/eagle3</code>. Fix Gemma 4 cache-reuse + TTFT. Build number correct (git accessible cette fois, b9019 réel).</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">Sources / repos</div>
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+    <table class="t">
+      <thead><tr><th>Repo</th><th>Branche / statut</th><th>Vérifié le</th><th>Dernier commit connu</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="nm">llama.cpp master<br><span style="font-weight:400;color:#888780;font-size:10px;">ggml-org/llama.cpp</span></td>
+          <td>master</td>
+          <td style="white-space:nowrap;">13 mai 2026</td>
+          <td style="font-family:monospace;">b9139+ (12 mai)</td>
+          <td><span class="pill p-ok">PR #22673 mergée 12 mai</span> MTP désormais dans master. Inclut aussi gpt-oss-20b, mulmat-q.</td>
+        </tr>
+        <tr>
+          <td class="nm">atomic-llama-cpp-turboquant<br><span style="font-weight:400;color:#888780;font-size:10px;">AtomicBot-ai</span></td>
+          <td style="font-family:monospace;font-size:10px;">feature/turboquant-kv-cache</td>
+          <td style="white-space:nowrap;">13 mai 2026</td>
+          <td style="font-family:monospace;">2e81dc5 (9 mai)</td>
+          <td>Actif — benchmarks publiés 7 mai, +30-50% throughput vs baseline WHT. ~8995 commits. Pas besoin de rebuild urgence.</td>
+        </tr>
+        <tr>
+          <td class="nm">lucebox-hub<br><span style="font-weight:400;color:#888780;font-size:10px;">Luce-Org</span></td>
+          <td>main</td>
+          <td style="white-space:nowrap;">13 mai 2026</td>
+          <td style="font-family:monospace;">6e31454 (13 mai)</td>
+          <td><span class="pill p-blu">très actif</span> 2033 commits. Qwen3.6-27B-DFlash support 4 mai · pflash compression 1 mai · DDTree CUDA graph 27 avr · SSM intermediates 6 mai · validation RTX 5090 4 mai. Vérifier si update apporte perf sur gfx1151.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">Delta à surveiller</div>
+  <div class="card" style="font-size:12px;line-height:1.9;">
+    <strong>✅ native-mtp → retiré</strong><br>
+    PR #22673 mergée dans master le 12 mai. Slot native-mtp supprimé — <code style="font-size:10px;">native-vulkan</code> supporte <code style="font-size:10px;">--spec-type mtp</code> nativement depuis b9139. Delta éliminé. Snapshot b9032 conservé dans l'historique.<br><br>
+    <strong>llama-rocm-7.2 toolbox</strong> — <span style="font-family:monospace;background:#f4f3ef;padding:1px 5px;border-radius:3px;">9139 − 8738 = 401 builds</span> de retard vs toolbox vulkan. Normal (builds ROCm moins fréquents).<br><br>
+    <strong>lucebox</strong> — Repo très actif (6 entrées majeures depuis avril). Vérifier changelog Luce-Org/lucebox-hub avant prochain déploiement pour voir si des optimisations gfx1151 ont été ajoutées.
+  </div>
+
+  <div class="sec">Historique snapshots</div>
+  <ul class="nl">
+    <li>
+      <span class="nd">2026-05-13</span>
+      <span><span class="ut">snapshot v1</span>
+        native-vulkan b9139 (527045bf) · native-mtp b9032 (5d5f1b46) · turboquant b9019 (0a635dcd9, rebuild 13 mai 21h21) ·
+        toolbox vulkan b9139 · toolbox rocm b8738 · vllm 0.19.2rc1.dev113 ·
+        lucebox 6e31454 · ROCm 7.2.3
+      </span>
+    </li>
+  </ul>
+</div>
+
+</div><!-- content -->
+</div><!-- app -->
+
+<script>
+const MODELS = [
+  {n:"gemma-4-31B-it-Q6_K",q:"Q6_K",src:"lmstudio-community",b:"toolbox",bk:"vulkan",ctx:96000,kv:"q8_0",flags:"mlock kv-unified"},
+  {n:"gemma-4-31B-it-Q8_0",q:"Q8_0",src:"lmstudio-community",b:"toolbox",bk:"vulkan",ctx:128000,kv:"—",flags:"kv-unified no-mmap"},
+  {n:"gemma-4-26B-A4B-it-Q8_0",q:"Q8_0",src:"lmstudio-community",b:"toolbox",bk:"vulkan",ctx:262144,kv:"q8_0",flags:"mlock kv-unified"},
+  {n:"Qwen3.5-122B-A10B-Opus-Reasoning-Q5_K_M",q:"Q5_K_M",src:"timteh673",b:"toolbox",bk:"vulkan",ctx:131072,kv:"q8_0",flags:"swa-full cont-batching"},
+  {n:"Qwopus3.5-27B-Q6_K",q:"Q6_K",src:"Jackrong",b:"toolbox",bk:"vulkan",ctx:128000,kv:"q8_0",flags:"swa-full"},
+  {n:"Qwen3.5-35B-A3B-Q8_0",q:"Q8_0",src:"lmstudio-community",b:"toolbox",bk:"vulkan",ctx:262144,kv:"q8_0",flags:"swa-full mlock cont-batching"},
+  {n:"Qwen3.5-122B-A10B-Q4_K_M",q:"Q4_K_M",src:"lmstudio-community",b:"toolbox",bk:"vulkan",ctx:262144,kv:"q8_0",flags:"swa-full no-mmap"},
+  {n:"Nemotron-3-Super-120B-Q4_K_M",q:"Q4_K_M",src:"lmstudio-community",b:"native-vulkan",bk:"native-vulkan",ctx:262144,kv:"q8_0",flags:"kv-unified no-mmap"},
+  {n:"Qwopus3.5-9B-Q8_0",q:"Q8_0",src:"Jackrong",b:"toolbox",bk:"vulkan",ctx:64000,kv:"q8_0",flags:"swa-full kv-unified"},
+  {n:"Holo3-35B-A3B-Q8_0",q:"Q8_0",src:"mradermacher",b:"toolbox",bk:"vulkan",ctx:131041,kv:"q8_0",flags:"swa-full kv-unified no-mmap"},
+  {n:"Hermes-4-70B-Q4_K_M",q:"Q4_K_M",src:"lmstudio-community",b:"toolbox",bk:"vulkan",ctx:131000,kv:"q8_0",flags:"swa-full kv-unified no-mmap"},
+  {n:"gpt-oss-120b-MXFP4",q:"MXFP4",src:"lmstudio-community",b:"toolbox",bk:"vulkan",ctx:131000,kv:"q8_0",flags:"kv-unified no-mmap"},
+  {n:"Gemma-4-31B-abliterated-Q4_K_M",q:"Q4_K_M",src:"paperscarecrow",b:"toolbox",bk:"vulkan",ctx:92000,kv:"q8_0",flags:"mlock kv-unified"},
+  {n:"Qwen3.5-35B-Uncensored-KL-Q8_0",q:"Q8_0",src:"LuffyTheFox",b:"toolbox",bk:"vulkan",ctx:262144,kv:"q8_0",flags:"swa-full kv-unified no-mmap"},
+  {n:"Qwen3.5-35B-A3B-Q8_0",q:"Q8_0",src:"unsloth",b:"toolbox",bk:"vulkan",ctx:262144,kv:"q8_0",flags:"swa-full kv-unified"},
+  {n:"gemma-4-31B-it-Q6_K",q:"Q6_K",src:"unsloth",b:"toolbox",bk:"vulkan",ctx:96000,kv:"q8_0",flags:"mlock kv-unified"},
+  {n:"Gemma-4-31B-abliterated-Q8_0",q:"Q8_0",src:"paperscarecrow",b:"toolbox",bk:"vulkan",ctx:64000,kv:"q8_0",flags:"numa cache-ram 4096 cache-reuse 256"},
+  {n:"gemma-4-26B-UD-Q4_K_M",q:"UD-Q4_K_M",src:"unsloth",b:"toolbox",bk:"vulkan",ctx:32768,kv:"—",flags:""},
+  {n:"Llama-3.1-8B-abliterated-i1-Q6_K",q:"i1-Q6_K",src:"mradermacher",b:"toolbox",bk:"vulkan",ctx:32768,kv:"—",flags:""},
+  {n:"Huihui-Qwen3.5-9B-abliterated-Q6_K",q:"Q6_K",src:"mradermacher",b:"toolbox",bk:"vulkan",ctx:32768,kv:"—",flags:"swa-full"},
+  {n:"MiniMax-M2.7-UD-Q3_K_XL",q:"UD-Q3_K_XL",src:"unsloth",b:"toolbox",bk:"vulkan",ctx:32768,kv:"—",flags:""},
+  {n:"gemma-4-31B-Mystery-Q6_k",q:"Q6_k",src:"DavidAU",b:"toolbox",bk:"vulkan",ctx:64000,kv:"—",flags:"mlock"},
+  {n:"gemma-4-31B-Claude-Opus-Distill-q6_k",q:"q6_k",src:"TeichAI",b:"toolbox",bk:"vulkan",ctx:64000,kv:"—",flags:"mlock"},
+  {n:"gemma-4-31B-DECKARD-i1-Q6_K",q:"i1-Q6_K",src:"mradermacher",b:"toolbox",bk:"vulkan",ctx:64000,kv:"—",flags:"mlock"},
+  {n:"supergemma4-26b-Q4_K_M",q:"Q4_K_M",src:"Jiunsong",b:"toolbox",bk:"vulkan",ctx:136000,kv:"—",flags:"mlock no-mmap"},
+  {n:"gemma-4-26B-Claude-Opus-Distill-f16",q:"f16",src:"TeichAI",b:"toolbox",bk:"vulkan",ctx:128000,kv:"q8_0",flags:"numa cache-ram 8192 cache-reuse 256 parallel 2"},
+  {n:"Qwen3.5-122B-A10B-Q6_K",q:"Q6_K",src:"unsloth",b:"toolbox",bk:"vulkan",ctx:262144,kv:"—",flags:"kv-unified"},
+  {n:"Qwen3.6-35B-A3B-BF16",q:"BF16",src:"unsloth",b:"toolbox",bk:"vulkan",ctx:128000,kv:"—",flags:"kv-unified parallel 3"},
+  {n:"Qwen3.6-35B-A3B-UD-Q8_K_XL",q:"UD-Q8_K_XL",src:"unsloth",b:"toolbox",bk:"vulkan",ctx:128000,kv:"—",flags:"kv-unified parallel 3"},
+  {n:"mercury/gemma-4-26B-Claude-Opus-Distill-Half-F16",q:"Half-F16",src:"mercury",b:"toolbox",bk:"vulkan",ctx:128000,kv:"q8_0",flags:"numa mlock kv-unified parallel 3"},
+  {n:"mercury/gemma-4-26B-Claude-Opus-Distill-Q8_K_MAX",q:"Q8_K_MAX",src:"mercury",b:"toolbox",bk:"vulkan",ctx:128000,kv:"q8_0",flags:"numa mlock kv-unified parallel 3"},
+  {n:"Gemma-4-31B-abliterated-f16",q:"f16",src:"paperscarecrow",b:"toolbox",bk:"vulkan",ctx:32768,kv:"—",flags:"no-mmap"},
+  {n:"mercury/gemma-4-26B-Claude-Opus-Distill-Q_auto",q:"Q_auto",src:"mercury",b:"toolbox",bk:"vulkan",ctx:128000,kv:"q8_0",flags:"numa mlock kv-unified parallel 3"},
+  {n:"mercury/gemma-4-31b-abliterated-Q_N",q:"Q_N",src:"mercury",b:"toolbox",bk:"vulkan",ctx:78000,kv:"q8_0",flags:"numa mlock kv-unified"},
+  {n:"mercury/Qwen3.6-35B-Q_C6",q:"Q_C6",src:"mercury",b:"toolbox",bk:"vulkan",ctx:128000,kv:"—",flags:"kv-unified no-mmap mlock"},
+  {n:"mercury/gemma-4-31b-abliterated-Q_4-Mira",q:"Q_4-Mira",src:"mercury",b:"toolbox",bk:"vulkan",ctx:128000,kv:"q8_0",flags:"kv-unified no-mmap mlock"},
+  {n:"mercury/gemma-4-31b-abliterated-Q_4-Mira_v2",q:"Q_4-Mira_v2",src:"mercury",b:"toolbox",bk:"vulkan",ctx:128000,kv:"q8_0",flags:"kv-unified no-mmap mlock"},
+  // native-vulkan
+  {n:"mercury/gemma-4-31b-abliterated-Q_C6v2",q:"Q_C6v2",src:"mercury",b:"native-vulkan",bk:"native-vulkan",ctx:128000,kv:"—",flags:"ctx-checkpoints 4 cache-ram 0 protected"},
+  {n:"mercury/gemma-4-26B-brain-Q_8+",q:"Q_8+",src:"mercury",b:"native-vulkan",bk:"native-vulkan",ctx:128000,kv:"—",flags:"ctx-checkpoints 1 cache-ram 0"},
+  {n:"mercury/Qwen3.6-35B-Uncensored-Q_8C_BRAIN",q:"Q_8C_BRAIN",src:"mercury",b:"native-vulkan",bk:"native-vulkan",ctx:262144,kv:"q8_0",flags:"ctx-checkpoints 12 cache-ram 4096 jinja poll"},
+  {n:"Qwen3-Embedding-8B-Q8_0",q:"Q8_0",src:"Qwen",b:"native-vulkan",bk:"native-vulkan",ctx:8192,kv:"q8_0",flags:"embedding pooling:last protected"},
+  {n:"Qwen3.6-27B-Abliterated-BF16",q:"BF16",src:"Youssofal",b:"native-vulkan",bk:"native-vulkan",ctx:32768,kv:"—",flags:"ctx-checkpoints 4 cache-ram 0 mlock"},
+  {n:"Qwen3.6-27B-Uncensored-HauhauCS-Q8_K_P",q:"Q8_K_P",src:"HauhauCS",b:"native-vulkan",bk:"native-vulkan",ctx:32768,kv:"—",flags:"ctx-checkpoints 2 cache-ram 0 mlock"},
+  {n:"Qwen3.6-27B-Uncensored-Wasserstein-Q8_K_P",q:"Q8_K_P",src:"LuffyTheFox",b:"native-vulkan",bk:"native-vulkan",ctx:32768,kv:"q8_0",flags:"ctx-checkpoints 2 cache-ram 0 mlock"},
+  {n:"mercury/Qwen3.6-27B-Uncensored-Q_5C_BRAIN",q:"Q_5C_BRAIN",src:"mercury",b:"native-vulkan",bk:"native-vulkan",ctx:128000,kv:"q5_0",flags:"ctx-checkpoints 4 mlock no-mmap"},
+  {n:"mercury/Qwen3.6-27B-Uncensored-Q4_K_M",q:"Q4_K_M",src:"mercury",b:"native-vulkan",bk:"native-vulkan",ctx:32768,kv:"q4_0",flags:"ctx-checkpoints 1 mlock no-mmap"},
+  {n:"mercury/Qwen3.6-27B-Uncensored-Q_C4_BRAIN",q:"Q_C4_BRAIN",src:"mercury",b:"native-vulkan",bk:"native-vulkan",ctx:42000,kv:"—",flags:"ctx-checkpoints 1 mlock no-mmap"},
+  {n:"mercury/Qwen3.5-9B-Q_8C_BRAIN",q:"Q_8C_BRAIN",src:"mercury",b:"native-vulkan",bk:"native-vulkan",ctx:42000,kv:"q4_0",flags:"ctx-checkpoints 8 mlock no-mmap"},
+  {n:"mercury/gemma-4-26B-Q_C8+_BRAIN",q:"Q_C8+_BRAIN",src:"mercury",b:"native-vulkan",bk:"native-vulkan",ctx:128000,kv:"q8_0",flags:"ctx-checkpoints 16 cache-ram 8192 mlock kv-unified"},
+  {n:"mercury/gemma-4-26B-uncensored-heretic-Q_C8_BRAIN",q:"Q_C8_BRAIN",src:"mercury",b:"native-vulkan",bk:"native-vulkan",ctx:9000,kv:"q8_0",flags:"ctx-checkpoints 8 jinja poll"},
+  {n:"Nemotron-3-Nano-30B-Q8_0",q:"Q8_0",src:"unsloth",b:"native-vulkan",bk:"native-vulkan",ctx:128000,kv:"q8_0",flags:"ctx-checkpoints 8 swa-full jinja"},
+  {n:"Mistral-Medium-3.5-128B-Q6_K",q:"Q6_K",src:"bartowski",b:"native-vulkan",bk:"native-vulkan",ctx:32768,kv:"—",flags:"jinja ctx-checkpoints 1 mlock chat-template"},
+  {n:"Nemotron-3-Nano-30B-BF16",q:"BF16",src:"unsloth",b:"native-vulkan",bk:"native-vulkan",ctx:32000,kv:"q8_0",flags:"kv-unified no-mmap"},
+  {n:"Mistral-Medium-3.5-128B-Q5_K_M",q:"Q5_K_M",src:"bartowski",b:"native-vulkan",bk:"native-vulkan",ctx:64000,kv:"q4_0",flags:"jinja ctx-checkpoints 1 mlock"},
+  {n:"Mistral-Small-4-119B-Uncensored-Q6_K",q:"Q6_K",src:"timteh673",b:"native-vulkan",bk:"native-vulkan",ctx:64000,kv:"q4_0",flags:"jinja ctx-checkpoints 1 mlock"},
+  {n:"Mistral-Small-4-119B-2603-UD-Q6_K",q:"UD-Q6_K",src:"unsloth",b:"native-vulkan",bk:"native-vulkan",ctx:64000,kv:"q4_0",flags:"jinja ctx-checkpoints 1 mlock"},
+  // turboquant
+  {n:"mercury/gemma-4-31b-abliterated-Q_C6v2_BRAIN",q:"Q_C6v2_BRAIN",src:"mercury",b:"native-turboquant",bk:"turboquant",ctx:90000,kv:"q8_0",flags:"MTP head ext. ctx-checkpoints 4 protected"},
+  // native-vulkan (MTP — ex native-mtp)
+  {n:"Qwen3.6-27B-Q8_0-mtp",q:"Q8_0-mtp",src:"froggeric",b:"native-vulkan",bk:"native-vulkan",ctx:90000,kv:"q8_0",flags:"spec-type mtp spec-draft-n-max 3 jinja ctx-checkpoints 12"},
+  // lucebox
+  {n:"mercury/Qwen3.6-27B-Uncensored-Q_8C_BRAIN",q:"Q_8C_BRAIN",src:"mercury",b:"native-lucebox",bk:"lucebox",ctx:128000,kv:"q8_0",flags:"DFlash budget 8 fa-window 128000"},
+  // vllm
+  {n:"gemma-4-31B-it-AWQ",q:"AWQ",src:"QuantTrio",b:"vllm-rocm",bk:"vllm-rocm",ctx:8192,kv:"fp8",flags:"awq_marlin ngram-spec enforce-eager"},
+];
+
+let currentFilter = 'all';
+
+function getBackendLabel(b) {
+  const m = {
+    'toolbox':'<span class="pill p-pur">toolbox vulkan</span>',
+    'native-vulkan':'<span class="pill p-ok">native-vulkan</span>',
+    'native-turboquant':'<span class="pill" style="background:#FAEEDA;color:#633806;">turboquant</span>',
+    'native-mtp':'<span class="pill p-blu">native-mtp</span>',
+    'native-lucebox':'<span class="pill p-bug">lucebox</span>',
+    'vllm-rocm':'<span class="pill p-pur">vllm-rocm</span>',
+  };
+  return m[b] || b;
+}
+
+function fmtCtx(c) {
+  if (c >= 1000) return Math.round(c/1000)+'K';
+  return c;
+}
+
+function renderModels() {
+  const q = (document.getElementById('mfilter').value || '').toLowerCase();
+  const tb = document.getElementById('mtbody');
+  let rows = MODELS.filter(m => {
+    if (currentFilter !== 'all') {
+      if (currentFilter === 'toolbox' && m.b !== 'toolbox') return false;
+      if (currentFilter !== 'toolbox' && m.b !== currentFilter) return false;
+    }
+    if (q) {
+      const hay = (m.n + m.q + m.src + m.b + m.bk + m.flags + m.kv).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  // Group by backend
+  const groups = {};
+  const order = ['toolbox','native-vulkan','native-turboquant','native-mtp','native-lucebox','vllm-rocm'];
+  rows.forEach(m => { if (!groups[m.b]) groups[m.b] = []; groups[m.b].push(m); });
+
+  const gNames = {
+    'toolbox':'🟣 Toolbox Vulkan',
+    'native-vulkan':'🟢 Native-Vulkan',
+    'native-turboquant':'🟢 Native-Turboquant',
+    'native-mtp':'🟢 Native-MTP',
+    'native-lucebox':'🟢 Native-Lucebox (DFlash)',
+    'vllm-rocm':'🟣 vLLM-ROCm',
+  };
+
+  let html = '';
+  order.forEach(bk => {
+    if (!groups[bk] || !groups[bk].length) return;
+    html += `<tr class="gr"><td colspan="6">${gNames[bk] || bk} — ${groups[bk].length} modèle(s)</td></tr>`;
+    groups[bk].forEach(m => {
+      html += `<tr data-backend="${m.b}">
+        <td class="nm" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.n}">${m.n}<br><span style="font-weight:400;color:#888780;font-size:10px;">${m.src}</span></td>
+        <td style="font-family:monospace;font-size:10px;">${m.q}</td>
+        <td>${getBackendLabel(m.b)}</td>
+        <td style="white-space:nowrap;">${fmtCtx(m.ctx)}</td>
+        <td style="font-family:monospace;font-size:10px;">${m.kv}</td>
+        <td style="font-size:11px;color:#5F5E5A;">${m.flags}</td>
+      </tr>`;
+    });
+  });
+
+  tb.innerHTML = html || '<tr><td colspan="6" style="text-align:center;color:#888780;padding:20px;">Aucun résultat</td></tr>';
+  document.getElementById('mcount').textContent = `${rows.length} modèle(s) affiché(s) sur ${MODELS.length}`;
+}
+
+function filterModels() { renderModels(); }
+
+function filterBy(b, btn) {
+  currentFilter = b;
+  document.querySelectorAll('.fb-btn').forEach(x => x.classList.remove('active'));
+  btn.classList.add('active');
+  renderModels();
+}
+
+const TAB_NAMES = ['overview','models','tb-vulkan','tb-rocm','tb-vllm','na-vulkan','na-turboquant','na-lucebox','notes','versions'];
+function sw(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => { if(TAB_NAMES[i]!==undefined) t.classList.toggle('active', TAB_NAMES[i]===name); });
+  document.querySelectorAll('.tab-content').forEach(c => { c.classList.toggle('active', c.id==='tab-'+name); });
+}
+
+function cp(id) {
+  const el = document.getElementById(id);
+  const text = el.innerText.replace(/copier$/, '').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = el.querySelector('.cp');
+    btn.textContent = '✓ copié';
+    setTimeout(() => btn.textContent = 'copier', 1500);
+  });
+}
+
+// Init models tab
+renderModels();
+</script>
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      

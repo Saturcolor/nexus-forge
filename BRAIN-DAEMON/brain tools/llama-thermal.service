@@ -1,0 +1,14 @@
+[Unit]
+Description=llama.cpp software thermal throttle daemon (Strix Halo APU)
+After=llama-perf.service
+Wants=llama-perf.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/llama-thermal.sh start
+ExecStop=/usr/local/bin/llama-thermal.sh stop
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

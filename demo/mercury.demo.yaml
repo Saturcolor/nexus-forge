@@ -1,0 +1,19 @@
+# Mercury — config DÉMO.
+# Utilisée avec MERCURY_DEMO_MODE=1 : aucun vrai backend n'est requis, l'inférence
+# est court-circuitée par le DemoBackend (réponses canned). Voir DEMO.md.
+server_host: "127.0.0.1"
+server_port: 17890
+require_api_key: false
+local_only_mode: true
+
+# Tous les backends réels OFF — DEMO_MODE renvoie des réponses factices de toute façon.
+ollama_enabled: false
+mlx_enabled: false
+lm_studio_enabled: false
+llamacpp_enabled: false
+openrouter_enabled: false
+anthropic_enabled: false
+
+model_mapping: {}
+model_routes: []
+users: []

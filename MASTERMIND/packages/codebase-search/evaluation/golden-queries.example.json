@@ -1,0 +1,21 @@
+[
+  {
+    "query": "où est validé le JWT",
+    "relevant": [
+      "src/auth/jwt.ts",
+      "src/middleware/auth.ts"
+    ]
+  },
+  {
+    "query": "service de retry database",
+    "relevant": [
+      "src/db/retry.ts"
+    ]
+  },
+  {
+    "query": "controller login utilisateur",
+    "relevant": [
+      "src/controllers/auth.controller.ts"
+    ]
+  }
+]

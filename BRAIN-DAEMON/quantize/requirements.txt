@@ -1,0 +1,6 @@
+questionary>=2.0
+rich>=13.0
+pyyaml>=6.0
+datasketch>=1.6     # MinHash + LSH pour dédup quasi-doublons (build-calibration.py)
+numpy>=1.24         # cartography.py : stats de poids déquantisés
+gguf>=0.10          # cartography.py : GGUFReader + dequantize (tous types, sans code maison)

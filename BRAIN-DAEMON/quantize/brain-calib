@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# ============================================================================
+# brain-calib — wrapper pour build-calibration.py
+# ----------------------------------------------------------------------------
+# Crée le venv si absent, installe les deps si besoin, puis lance
+# build-calibration.py (extracteur shared-memory -> perso.txt).
+# Usage :
+#   ./brain-calib                              # utilise config.yaml
+#   ./brain-calib --source ~/autre/dossier
+#   ./brain-calib --exclude secret Personal
+# ============================================================================
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR="$SCRIPT_DIR/.venv"
+REQ_FILE="$SCRIPT_DIR/requirements.txt"
+REQ_HASH_FILE="$VENV_DIR/.req-hash"
+PY_SCRIPT="$SCRIPT_DIR/build-calibration.py"
+
+if [ -t 1 ]; then
+  CYAN=$'\033[0;36m'; GREEN=$'\033[0;32m'; NC=$'\033[0m'
+else
+  CYAN=""; GREEN=""; NC=""
+fi
+
+log() { echo -e "${CYAN}[brain-calib]${NC} $*"; }
+
+if [ ! -d "$VENV_DIR" ]; then
+  log "Premier lancement : création du venv dans $VENV_DIR..."
+  python3 -m venv "$VENV_DIR"
+  log "${GREEN}venv créé${NC}"
+fi
+
+# shellcheck disable=SC1091
+source "$VENV_DIR/bin/activate"
+
+# Sync deps si requirements.txt a bougé (hash sha256 stocké dans le venv).
+# Partagé avec brain-quant — les deux wrappers utilisent le même venv et le
+# même hash file, donc pas de double install si tu alternes.
+CURRENT_HASH="$(sha256sum "$REQ_FILE" | cut -d' ' -f1)"
+STORED_HASH=""
+[ -f "$REQ_HASH_FILE" ] && STORED_HASH="$(cat "$REQ_HASH_FILE")"
+
+if [ "$CURRENT_HASH" != "$STORED_HASH" ]; then
+  log "Sync des dépendances depuis $REQ_FILE..."
+  pip install --quiet --upgrade pip
+  pip install --quiet -r "$REQ_FILE"
+  echo "$CURRENT_HASH" > "$REQ_HASH_FILE"
+  log "${GREEN}dépendances à jour${NC}"
+fi
+
+exec python "$PY_SCRIPT" "$@"

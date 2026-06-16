@@ -1,0 +1,25 @@
+# brain-daemon — config DÉMO.
+# Utilisée avec BRAIN_DEMO_MODE=1 : aucun GPU AMD, aucun binaire llama-server, aucun
+# modèle sur disque. Les handlers renvoient des données factices. Voir DEMO.md.
+daemon_host: "127.0.0.1"
+daemon_port: 4321
+toolbox_name: demo-toolbox      # requis par ModelManager — non utilisé en DEMO_MODE
+models_path: ./demo-models      # inexistant — le scan disque est bypassé en DEMO_MODE
+base_port: 11430
+default_context: 4096
+default_extra_args: []
+kv_cache_dir: ""
+
+# Tous les modules touchant le matériel sont désactivés en démo.
+downloader:
+  enabled: false
+omnivoice:
+  enabled: false
+thermal:
+  auto_start: false
+memory:
+  enabled: false
+atlas:
+  enabled: false
+quant:
+  enabled: false

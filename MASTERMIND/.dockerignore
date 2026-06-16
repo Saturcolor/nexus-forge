@@ -1,0 +1,7 @@
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+**/.demo-data
+.git
+*.log
+config/mastermind.local.yml

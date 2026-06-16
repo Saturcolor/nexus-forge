@@ -1,0 +1,154 @@
+# ============================================================
+# Mastermind — example configuration
+# ============================================================
+# Copy this file to config/mastermind.yml (or config/mastermind.local.yml
+# to override per-environment), then fill in your own values.
+#
+# BOOT CHECKLIST
+#   1. Set database.password (or set MASTERMIND_PG_DSN env var)
+#   2. Set providers[0].apiKey (or remove apiKey if your endpoint needs none)
+#   3. Adjust paths.agentsDir and paths.sharedMemoryDir to your install location
+#   4. Optional: add telegram bots and/or ncm block (see commented sections below)
+#   5. Run migrations: psql -U mastermind mastermind < migrations/*.sql
+#   6. Start: npm run start (or nexusctl update mastermind on a NEXUS deployment)
+# ============================================================
+
+server:
+  port: 3000
+  host: 0.0.0.0
+  # Server-side API key — clients must pass this in the Authorization header.
+  # Generate with: openssl rand -base64 32
+  apiKey: YOUR_SERVER_API_KEY
+
+paths:
+  # Directory where per-agent workspaces live (each agent gets a sub-folder).
+  agentsDir: /opt/mastermind/agents
+  # Shared memory directory — all agents can read/write here.
+  sharedMemoryDir: /opt/mastermind/shared-memory
+
+database:
+  host: 127.0.0.1
+  port: 5432
+  database: mastermind
+  user: mastermind
+  # Set a strong password here, or use the MASTERMIND_PG_DSN env var instead.
+  password: changeme
+
+defaults:
+  # Default model string — must match a model available on your provider.
+  # For Ollama: "ollama/llama3" — for OpenAI: "gpt-4o-mini" — for llama.cpp: "llamacpp/default"
+  model: provider/your-model-name
+  temperature: 0.7
+  maxContextTokens: 8192
+
+providers:
+  - id: local
+    # Use openai-compat for any OpenAI-API-compatible endpoint (Ollama, llama.cpp server,
+    # LM Studio, vLLM, LocalAI, Together, OpenRouter …).
+    type: openai-compat
+    baseUrl: http://localhost:11434/v1   # Ollama default — adjust to your server
+    # Remove apiKey or set to a placeholder if your local endpoint does not require auth.
+    apiKey: YOUR_PROVIDER_API_KEY
+    # Optional: URL that returns an OpenAI-style /v1/models list (for model picker UI).
+    # modelsUrl: http://localhost:11434/api/tags
+    # Optional: proprietary stats endpoint (enables provider stats bar in the UI).
+    # statsUrl: http://localhost:11434
+
+# ────────────────────────────────────────────────────────────
+# Agents
+# ────────────────────────────────────────────────────────────
+# Each top-level key is an agent ID (alphanumeric + hyphens).
+# Workspaces are created automatically on first run.
+agents:
+  assistant:
+    workspaceDir: workspace-assistant
+    model: provider/your-model-name   # override defaults.model per agent
+    temperature: 0.7
+    maxContextTokens: 8192
+    maxCompletionTokens: 2048
+    contextMessages: 10
+    tools:
+      systemAccess: false   # set true to enable bash/file tools (use with care)
+
+  researcher:
+    workspaceDir: workspace-researcher
+    model: provider/your-model-name
+    temperature: 0.5
+    maxContextTokens: 8192
+    maxCompletionTokens: 4096
+    contextMessages: 6
+    tools:
+      systemAccess: false
+
+# ────────────────────────────────────────────────────────────
+# Telegram integration (optional — comment out if not needed)
+# ────────────────────────────────────────────────────────────
+# To enable Telegram:
+#   1. Create a bot via @BotFather and copy the token below.
+#   2. Get your personal chat ID (e.g. via @userinfobot).
+#   3. Uncomment the telegram block in the agent config above.
+#
+# telegram:
+#   bots:
+#     - id: assistant-bot
+#       token: YOUR_TELEGRAM_BOT_TOKEN
+#       enabled: true
+#
+# Then in the agent config add:
+#   assistant:
+#     telegram:
+#       botId: assistant-bot
+#       enabled: true
+#       chatIds:
+#         - YOUR_TELEGRAM_CHAT_ID
+
+# ────────────────────────────────────────────────────────────
+# Web search (optional)
+# ────────────────────────────────────────────────────────────
+# search:
+#   braveApiKey: YOUR_BRAVE_SEARCH_API_KEY
+
+# ────────────────────────────────────────────────────────────
+# NCM voice service (optional — only needed if you run NCM)
+# ────────────────────────────────────────────────────────────
+# ncm:
+#   baseUrl: http://127.0.0.1:7600
+
+# ────────────────────────────────────────────────────────────
+# Memory store (semantic long-term memory via pgvector)
+# ────────────────────────────────────────────────────────────
+memoryStore:
+  enabled: true
+  # Dimensions must match the embedding model your provider returns.
+  # Common values: 1536 (OpenAI text-embedding-3-small), 4096 (nomic-embed-text)
+  embeddingDimensions: 1536
+  autoInjection:
+    enabled: true
+    topK: 3
+    threshold: 0.45
+
+# ────────────────────────────────────────────────────────────
+# Consolidation (automated memory + chat compaction)
+# ────────────────────────────────────────────────────────────
+consolidation:
+  chat:
+    enabled: true
+    cronHour: 0   # hour of day to run (0-23, default: 0 = midnight)
+  memory:
+    enabled: true
+    cronSchedule: weekly   # weekly | daily
+    cronHour: 3
+    scoring:
+      recencyWeight: 0.5
+      frequencyWeight: 0.35
+      ageWeight: 0.15
+      recencyHalfLifeDays: 30
+      maxAgeDays: 365
+    clustering:
+      mergeThreshold: 0.75
+      maxPairsPerRun: 200
+      maxClusterSize: 5
+    archival:
+      scoreThreshold: 0.1
+      minAgeDaysBeforeArchive: 60
+    delayBetweenMergesMs: 1000

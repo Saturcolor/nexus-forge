@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# ============================================================================
+# brain-quant — wrapper pour lancer le TUI de quantization
+# ----------------------------------------------------------------------------
+# Crée le venv si absent, installe les deps si besoin, puis lance brain-quant.py.
+# Usage :
+#   ./brain-quant          # mode interactif TUI
+#   ./brain-quant --help   # passé à brain-quant.py (si un jour on ajoute des flags)
+# ============================================================================
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR="$SCRIPT_DIR/.venv"
+REQ_FILE="$SCRIPT_DIR/requirements.txt"
+REQ_HASH_FILE="$VENV_DIR/.req-hash"
+PY_SCRIPT="$SCRIPT_DIR/brain-quant.py"
+
+# ── Couleurs
+if [ -t 1 ]; then
+  CYAN=$'\033[0;36m'; GREEN=$'\033[0;32m'; NC=$'\033[0m'
+else
+  CYAN=""; GREEN=""; NC=""
+fi
+
+log() { echo -e "${CYAN}[brain-quant]${NC} $*"; }
+
+# ── 1. Créer le venv si absent
+if [ ! -d "$VENV_DIR" ]; then
+  log "Premier lancement : création du venv dans $VENV_DIR..."
+  python3 -m venv "$VENV_DIR"
+  log "${GREEN}venv créé${NC}"
+fi
+
+# ── 2. Activer le venv
+# shellcheck disable=SC1091
+source "$VENV_DIR/bin/activate"
+
+# ── 3. (Ré)installer les deps si requirements.txt a changé.
+#       On compare le sha256 du fichier au hash stocké dans le venv.
+#       Plus fiable que le check canari sur un import unique : détecte les
+#       bumps de version, ajouts et retraits.
+CURRENT_HASH="$(sha256sum "$REQ_FILE" | cut -d' ' -f1)"
+STORED_HASH=""
+[ -f "$REQ_HASH_FILE" ] && STORED_HASH="$(cat "$REQ_HASH_FILE")"
+
+if [ "$CURRENT_HASH" != "$STORED_HASH" ]; then
+  log "Sync des dépendances depuis $REQ_FILE..."
+  pip install --quiet --upgrade pip
+  pip install --quiet -r "$REQ_FILE"
+  echo "$CURRENT_HASH" > "$REQ_HASH_FILE"
+  log "${GREEN}dépendances à jour${NC}"
+fi
+
+# ── 4. Exec le TUI (transmet les args éventuels)
+exec python "$PY_SCRIPT" "$@"

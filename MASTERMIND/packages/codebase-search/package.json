@@ -1,0 +1,45 @@
+{
+  "name": "@mastermind/codebase-search",
+  "version": "1.24.0",
+  "description": "Système d'indexation de codebase avec vector search (Mastermind)",
+  "main": "./dist/index.js",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./lib": {
+      "types": "./dist/programmatic.d.ts",
+      "import": "./dist/programmatic.js"
+    },
+    "./lib/embeddings": {
+      "types": "./dist/embeddings.d.ts",
+      "import": "./dist/embeddings.js"
+    }
+  },
+  "bin": {
+    "codebase-search": "./bin/codebase-search.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "index": "node dist/index.js index",
+    "search": "node dist/index.js search",
+    "test": "node dist/index.js test"
+  },
+  "dependencies": {
+    "@lancedb/lancedb": "^0.26.2",
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0",
+    "dotenv": "^16.4.5",
+    "glob": "^10.3.10",
+    "ora": "^8.0.1",
+    "tree-sitter": "^0.21.1",
+    "tree-sitter-javascript": "^0.21.4",
+    "tree-sitter-python": "^0.21.0",
+    "tree-sitter-typescript": "^0.21.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

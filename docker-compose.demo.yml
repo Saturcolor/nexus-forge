@@ -1,0 +1,42 @@
+# NEXUS demo stack — one command to run the whole thing with a fake LLM.
+#
+#   docker compose -f docker-compose.demo.yml up --build
+#
+# Then:
+#   curl -X POST http://localhost:3000/api/chat/assistant \
+#     -H 'Authorization: Bearer demo-key' -H 'Content-Type: application/json' \
+#     -d '{"content":"hello"}'
+#
+# A chat request flows Mastermind -> Mercury (DEMO_MODE, fake LLM) -> reply.
+# brain-daemon is not included (it is AMD Strix Halo hardware-specific — see DEMO.md
+# for its standalone demo). memoryStore is off so no pgvector is needed.
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: mastermind
+      POSTGRES_PASSWORD: mastermind
+      POSTGRES_DB: mastermind
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mastermind -d mastermind"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  mercury:
+    build: ./MERCURY
+    environment:
+      MERCURY_DEMO_MODE: "1"
+    ports:
+      - "17890:17890"
+
+  mastermind:
+    build: ./MASTERMIND
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mercury:
+        condition: service_started
+    ports:
+      - "3000:3000"

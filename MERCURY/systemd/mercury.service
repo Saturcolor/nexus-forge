@@ -1,0 +1,16 @@
+[Unit]
+Description=Mercury (Ollama/MLX routing queue)
+After=network.target
+
+[Service]
+Type=simple
+User=%SERVICE_USER%
+Group=%SERVICE_USER%
+WorkingDirectory=%APP_DIR%
+Environment=PATH=%APP_DIR%/venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%APP_DIR%/venv/bin/python main.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

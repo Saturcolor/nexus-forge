@@ -1,0 +1,35 @@
+schema_version: 1
+name: mercury
+root: /MERCURY
+service: mercury
+user: <SERVICE_USER>
+depends_on: []
+
+stack:
+  python:
+    venv: venv
+    requirements: requirements.txt
+    entrypoint: main.py
+  frontend:
+    path: frontend
+    build_cmd: "npm ci && npm run build"
+    output_dir: dist
+    required: false
+
+database:
+  engine: none
+
+healthcheck:
+  type: http
+  url: http://127.0.0.1:28332/healthz
+  timeout_sec: 60
+
+version:
+  file: VERSION
+
+preserve:
+  - config.yaml
+  - data
+  - logs
+  - mercury.log
+  - benchmark.json

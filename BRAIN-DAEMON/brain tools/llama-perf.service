@@ -1,0 +1,13 @@
+[Unit]
+Description=llama.cpp performance mode (CPU governor + GPU clocks + vm tuning)
+After=local-fs.target
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/llama-perf.sh on
+ExecStop=/usr/local/bin/llama-perf.sh off
+
+[Install]
+WantedBy=multi-user.target

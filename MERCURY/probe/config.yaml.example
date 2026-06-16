@@ -1,0 +1,39 @@
+# Probe LM Studio / Ollama - Configuration
+# Copier en config.yaml et adapter.
+# À installer sur la machine qui héberge LM Studio et/ou Ollama.
+# La même probe peut servir les deux si ils tournent sur la même machine.
+
+# Écoute (pour que le middleware OpenRouter puisse appeler GET /stats)
+host: "0.0.0.0"
+port: 9090
+
+# Ollama (optionnel). Si défini, la probe interroge cette URL pour GET /api/ps
+# et ajoute une clé "ollama" dans la réponse /stats (modèles chargés en mémoire).
+# Ex. http://localhost:11434
+ollama_url: ""
+# Répertoire des logs Ollama pour parsing (activité, durée requête, loading).
+# Vide = ~/.ollama/logs. Fichier suivi : server.log
+ollama_logs_dir: ""
+
+# Répertoire des logs LM Studio.
+# Vide = utilise ~/.lmstudio/server-logs (home du user qui exécute la probe).
+# La probe tourne sous le même user que LM Studio par défaut (logname au moment de install.sh).
+lmstudio_logs_dir: ""
+
+# Méthode de lecture des logs : "tail" (fichier) ou "cli" (lms log stream).
+# - tail : suit le dernier fichier .log du répertoire (réactif, pas besoin de lms en PATH).
+# - cli : subprocess "lms log stream --source server" (nécessite LM Studio CLI installé).
+log_source: "tail"
+
+# Nombre de lignes relues au démarrage pour pré-remplir l'état depuis les logs existants.
+# Permet d'avoir last_generation_tokens, last_prompt_tokens, etc. non-null dès le démarrage
+# même si aucune nouvelle requête LM Studio n'a eu lieu.
+# 0 = désactivé (tail uniquement les nouvelles lignes, comportement avant v1.7.x)
+scan_tail_lines: 500
+
+# Intervalle de rafraîchissement des stats système (secondes)
+stats_interval_seconds: 2
+
+# SSE : intervalle d'envoi des événements quand aucun changement (secondes)
+# Pour garder la connexion alive et permettre un affichage fluide.
+sse_heartbeat_seconds: 5

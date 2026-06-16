@@ -1,0 +1,175 @@
+# brain-quant — configuration
+# Le script lit ce fichier au démarrage. Tous les chemins supportent ~ et
+# variables d'environnement.
+
+# Répertoire racine des modèles GGUF (aligné sur config.yaml du daemon).
+# Le script scanne récursivement à cet endroit les *.gguf F16/BF16.
+models_path: ~/.lmstudio/models
+
+# Sous-dossier de sortie dans models_path. Les quants custom finissent dans
+# <models_path>/<output_subdir>/ ce qui les rend découvrables par le daemon
+# sans configuration supplémentaire.
+output_subdir: mercury
+
+# Répertoire des fichiers de calibration (.txt). Relatif = relatif au script.
+calibration_dir: ./calibration
+
+# Répertoire persistant des imatrix calculées. Centralisé pour réutilisation
+# entre runs / entre modèles re-téléchargés. Hors cache = survit à un nettoyage
+# ~/.cache. Doit être sous $HOME (les toolbox containers ne voient que HOME).
+imatrix_dir: ~/mercury/matrix
+
+# Pour build-calibration.py : source et exclusions par défaut.
+calibration_build:
+  source: ~/Documents/calibration-source   # CHANGEME: dossier contenant vos fichiers .md/.txt
+  output_name: perso.txt
+  exclude_dirs: []
+  max_code_block_lines: 50      # drop les blocs ``` plus longs que ça
+  max_table_rows: 30            # drop les tables markdown plus longues
+  shuffle_paragraphs: true      # mélange pour stats imatrix plus stables
+
+  # Qualité des paragraphes
+  min_paragraph_chars: 80       # ancien: 20 (trop permissif, laissait titres/puces orphelins)
+  max_paragraph_chars: 3000     # au-delà : split par phrases
+  min_alnum_ratio: 0.55         # drop paragraphes majoritairement ponctuation/emoji/markdown
+
+  # Dédup quasi-doublons (MinHash + LSH via datasketch)
+  # 0.0 = désactivé (dédup SHA1 exact seulement)
+  near_dup_jaccard: 0.82        # seuil Jaccard ≥ ce seuil = quasi-doublon
+  near_dup_shingle: 5           # taille n-gram mots pour shingles
+  near_dup_num_perm: 128        # permutations MinHash (128 = standard)
+
+  # Équilibrage des buckets (top-level dirs sous source)
+  # Aucun bucket ne dépasse ce ratio dans le corpus final. 0.0 = désactivé.
+  bucket_max_ratio: 0.35
+
+# Toolbox par défaut. Override interactif au lancement.
+#   - llama-vulkan-radv : stable, aligné default prod du daemon
+#   - llama-rocm-7.2    : ~5-10% plus rapide sur imatrix, moins stable
+toolbox: llama-vulkan-radv
+
+# Paramètres imatrix. Strix Halo : fa=1 et --no-mmap obligatoires.
+imatrix:
+  chunks: 200       # nombre de chunks (~400k tokens de calibration)
+  ctx: 4096         # context par chunk
+  batch: 512        # batch size
+  ngl: 999          # offload layers max (unified memory Strix Halo)
+
+# Quants proposés dans le menu TUI.
+#
+# Chaque preset peut définir :
+#   name              : affiché dans le TUI, utilisé dans le nom du fichier sortie
+#   base              : type passé à llama-quantize (Q8_K, Q6_K, etc.)
+#   desc              : description TUI
+#   size_ratio        : taille estimée relative au F16 source (pour affichage)
+#   arch              : "moe", "dense", ou omis (= les deux). Affiché dans le TUI.
+#   preserve_embeddings : si true → token_embd + output en F16
+#   tensor_overrides  : liste de regex=type appliquées via --tensor-type
+#
+# Ordre des presets dans ce fichier = ordre dans le menu TUI.
+quants:
+
+  # ── Premium (entre Q8 et F16) ────────────────────────────────────────────
+  #
+  # Leçons apprises (2026-04-17, distill TeichAI Claude-Opus sur Gemma 4 MoE) :
+  #
+  # 1. Quants HÉTÉROGÈNES par layer (mix F16/Q8 selon la position) = INSTABLES
+  #    sur long context. Les conversions de type inter-layers accumulent des
+  #    erreurs d'arrondi asymétriques qui poussent vers des attracteurs de
+  #    repetition. Preset "Half-F16" retiré.
+  #
+  # 2. Quants UNIFORMES par layer = STABLES, même agressifs. Chaque layer voit
+  #    le même format, pas de conversion parasite entre couches adjacentes.
+  #
+  # 3. Sur distills Opus-like, le F16 pur peut AUSSI être instable (pathologie
+  #    du modèle lui-même). Un Q8 sur experts FFN peut paradoxalement être
+  #    PLUS stable qu'F16 — effet régularisant (bruit Q8 casse l'attracteur).
+  #
+  # 4. Sur MoE, les experts FFN font ~85% du volume. Q8 sur experts suffit
+  #    à compresser drastiquement sans toucher attention/emb/out/routers.
+
+  - name: Q8_K_MAX
+    base: Q8_0
+    desc: "Tout F16 sauf experts FFN Q8 — stable long-context (~0.56× F16)"
+    size_ratio: 0.56
+    arch: moe
+    preserve_embeddings: true
+    tensor_overrides:
+      - 'attn_[kqv]\..*=F16'
+      - 'attn_output\..*=F16'
+      - 'ffn_gate_inp\..*=F16'
+      - '.*_norm\..*=F16'
+
+  - name: UD-Q8_K_XL
+    base: Q8_0
+    desc: "Attn Q8 + emb/out/routers F16 — plus régularisé (~0.55× F16)"
+    size_ratio: 0.55
+    arch: moe
+    preserve_embeddings: true
+    tensor_overrides:
+      - 'attn_[kqv]\..*=Q8_0'
+      - 'attn_output\..*=Q8_0'
+      - 'ffn_gate_inp\..*=F16'
+
+  # ── Sweet spots compacts ─────────────────────────────────────────────────
+
+  - name: UD-Q6_K_XL
+    base: Q6_K
+    desc: "Sweet spot — quasi indiscernable du F16 (~0.43× F16)"
+    size_ratio: 0.43
+    arch: moe
+    default: true             # coché d'office dans le menu TUI
+    preserve_embeddings: true
+    tensor_overrides:
+      - 'attn_[kqv]\..*=Q8_0'
+      - 'attn_output\..*=Q8_0'
+      - 'ffn_gate_inp\..*=F16'
+
+  - name: UD-Q5_K_M
+    base: Q5_K_M
+    desc: "Compact, qualité solide (~0.36× F16)"
+    size_ratio: 0.36
+    arch: moe
+    preserve_embeddings: true
+    tensor_overrides:
+      - 'attn_[kqv]\..*=Q8_0'
+      - 'attn_output\..*=Q8_0'
+      - 'ffn_gate_inp\..*=F16'
+
+  - name: UD-Q4_K_M
+    base: Q4_K_M
+    desc: "Aggressive, bon avec imatrix custom (~0.30× F16)"
+    size_ratio: 0.30
+    arch: moe
+    preserve_embeddings: true
+    tensor_overrides:
+      - 'attn_[kqv]\..*=Q8_0'
+      - 'attn_output\..*=Q8_0'
+      - 'ffn_gate_inp\..*=F16'
+
+  # ── Baselines sans overrides (comparaison) ───────────────────────────────
+
+  - name: Q8_0
+    base: Q8_0
+    desc: "Classique non-dynamic — baseline comparable (~0.53× F16)"
+    size_ratio: 0.53
+
+  - name: Q6_K
+    base: Q6_K
+    desc: "Classique non-dynamic (~0.41× F16)"
+    size_ratio: 0.41
+
+  - name: Q5_K_M
+    base: Q5_K_M
+    desc: "Classique compact (~0.34× F16)"
+    size_ratio: 0.34
+
+  - name: Q4_K_M
+    base: Q4_K_M
+    desc: "Classique agressif (~0.28× F16)"
+    size_ratio: 0.28
+
+  - name: IQ3_XXS
+    base: IQ3_XXS
+    desc: "Ultra-compact — tests uniquement (~0.17× F16)"
+    size_ratio: 0.17

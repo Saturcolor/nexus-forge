@@ -1,0 +1,27 @@
+{
+  "name": "mastermind",
+  "version": "1.24.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/shared",
+    "packages/backend",
+    "packages/frontend",
+    "packages/codebase-search"
+  ],
+  "scripts": {
+    "version:sync": "node scripts/sync-version.mjs",
+    "dev": "npm run dev --workspace=packages/backend & npm run dev --workspace=packages/frontend",
+    "dev:backend": "npm run dev --workspace=packages/backend",
+    "dev:frontend": "npm run dev --workspace=packages/frontend",
+    "clean": "rm -rf packages/shared/dist packages/codebase-search/dist packages/backend/dist packages/frontend/dist && find packages -name '*.tsbuildinfo' -delete",
+    "prebuild": "npm run clean",
+    "build": "npm run build --workspace=packages/shared && npm run build --workspace=@mastermind/codebase-search && npm run build --workspace=packages/frontend && npm run build --workspace=packages/backend",
+    "build:frontend": "npm run build --workspace=packages/frontend",
+    "start": "node packages/backend/dist/index.js",
+    "typecheck": "tsc --build"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

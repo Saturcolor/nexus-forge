@@ -1,0 +1,38 @@
+schema_version: 1
+name: mastermind
+root: /MASTERMIND
+service: mastermind
+user: ${DEPLOY_USER}   # override with your deployment username
+depends_on: []
+
+# Mastermind is a Node monorepo (no Python). The `node` stack block triggers
+# a single `npm run build` at the package root that walks workspaces.
+stack:
+  node:
+    package_root: .
+    # version:sync propagates the root VERSION file into all workspace package.json
+    # files. Must run BEFORE build so the built artifacts embed the right version.
+    build_cmd: "npm ci && npm run version:sync && npm run build"
+
+database:
+  engine: postgres
+  dsn_env: MASTERMIND_PG_DSN
+  migrations_dir: migrations
+
+# pgvector + HNSW warmup can take > 60s on Mastermind, bump timeout.
+# /health/ready is public (no auth) and flips to 200 only once all modules
+# have finished init(). nexusctl pings unauthenticated, so /api/status would
+# always 401 and pollute logs.
+healthcheck:
+  type: http
+  url: http://127.0.0.1:3000/health/ready
+  timeout_sec: 300
+
+version:
+  file: VERSION
+
+preserve:
+  - config/mastermind.yml
+  - config/mastermind.local.yml
+  - .env
+  - logs

@@ -1,0 +1,7 @@
+fastapi>=0.104.0,<1.0
+uvicorn[standard]>=0.24.0,<1.0
+httpx>=0.25.0,<1.0
+pyyaml>=6.0,<7.0
+aiofiles>=23.2.1,<25.0
+croniter>=2.0.0,<4.0
+websockets>=13.0,<16.0

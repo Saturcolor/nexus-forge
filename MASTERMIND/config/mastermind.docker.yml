@@ -1,0 +1,69 @@
+# ============================================================
+# Mastermind — DOCKER demo configuration
+# ============================================================
+# Used by docker-compose.demo.yml. Identical to mastermind.demo.yml except hosts
+# point at the compose service names (postgres, mercury) instead of localhost.
+# ============================================================
+
+server:
+  port: 3000
+  host: 0.0.0.0
+  apiKey: demo-key
+
+paths:
+  agentsDir: /data/agents
+  sharedMemoryDir: /data/shared-memory
+
+database:
+  host: postgres
+  port: 5432
+  database: mastermind
+  user: mastermind
+  password: mastermind
+
+defaults:
+  model: local/demo
+  temperature: 0.7
+  maxContextTokens: 8192
+
+providers:
+  - id: local
+    type: openai-compat
+    baseUrl: http://mercury:17890/v1
+    apiKey: demo
+    modelsUrl: http://mercury:17890/api/tags
+
+agents:
+  assistant:
+    workspaceDir: workspace-assistant
+    model: local/demo
+    temperature: 0.7
+    maxContextTokens: 8192
+    maxCompletionTokens: 2048
+    contextMessages: 10
+    tools:
+      systemAccess: false
+
+  researcher:
+    workspaceDir: workspace-researcher
+    model: local/demo
+    temperature: 0.5
+    maxContextTokens: 8192
+    maxCompletionTokens: 4096
+    contextMessages: 6
+    tools:
+      systemAccess: false
+
+memoryStore:
+  enabled: false
+  embeddingDimensions: 16
+  autoInjection:
+    enabled: false
+    topK: 3
+    threshold: 0.45
+
+consolidation:
+  chat:
+    enabled: false
+  memory:
+    enabled: false

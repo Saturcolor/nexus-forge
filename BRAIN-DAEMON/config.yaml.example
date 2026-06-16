@@ -1,0 +1,65 @@
+models_path: ~/.lmstudio/models
+toolbox_name: llama-vulkan-radv
+# Optionnel — toolboxes secondaires pour les autres backends.
+# toolbox_rocm_name: llama-rocm-7.2     # llama.cpp ROCm (kyuz0)
+# toolbox_vllm_name: vllm                # vLLM-ROCm (kyuz0/vllm-therock-gfx1151)
+# Optionnel — HuggingFace cache standard à scanner pour les modèles HF (vLLM).
+# Default : respecte $HF_HUB_CACHE / $HUGGINGFACE_HUB_CACHE / $HF_HOME/hub, sinon
+# ~/.cache/huggingface/hub. Override seulement si tu as un layout custom.
+# hf_cache_path: ~/.cache/huggingface/hub
+# Adresse d'écoute du daemon (0.0.0.0 = toutes les interfaces, utile si OpenRouter est sur une autre machine)
+daemon_host: 0.0.0.0
+daemon_port: 4321
+base_port: 11430
+default_context: 262144
+default_extra_args: []
+# Directory for KV cache save/restore (--slot-save-path). Leave empty to disable.
+kv_cache_dir: ~/.local/share/mercury/kv-cache
+
+# ── Backends natifs supplémentaires ──────────────────────────────────────────
+# Slots de builds llama.cpp coexistants à côté de native-vulkan (master).
+# Chaque entrée enregistre un nouveau backend dans `_BACKEND_MAP` (chargement)
+# ET dans `/updater/status` (build/update via build-native.sh --pr / --branch
+# / --prefix). Le binaire doit être à <prefix>/bin/llama-server.
+#
+# Exemple — fork TurboQuant (KV cache turbo2/3/4 via WHT rotation, installé par
+# `install-turboquant.sh` à partir de /opt/atomic-llama-cpp-turboquant). Pas de
+# pr/branch ici : le binaire est buildé/installé hors de build-native.sh, donc
+# /updater/build sur ce slot échouerait — c'est attendu, on ne s'en sert que
+# pour le routage au load et l'affichage de version.
+# extra_native_backends:
+#   native-turboquant:
+#     binary: /opt/llama-native-turboquant/bin/llama-server
+#   # Exemple PR upstream (ex: DFlash, MTP) — buildable via /updater/build :
+#   # native-dflash:
+#   #   binary: /opt/llama-native-dflash/bin/llama-server
+#   #   pr: 22105
+
+# ── Downloader (HuggingFace model manager) ───────────────────────────────────
+# Destination = models_path (partage avec LM Studio).
+# Token HF lu dans ~run_as_user/.cache/huggingface/token (geré via l'UI Models).
+downloader:
+  enabled: true
+  history_keep: 50
+
+# ── OmniVoice (TTS clone zero-shot, 646 langues) ─────────────────────────────
+# Opt-in : le modèle pèse ~2-4 GB GPU + torch.compile au premier appel, on
+# évite donc de le charger si non utilisé. Installer le code et les poids via
+# `scripts/install_omnivoice.sh` avant d'activer.
+#
+# voices_dir : où sont stockés les WAV de référence + DB SQLite des profils
+# (clone:*). Par défaut ~/.local/share/brain-daemon/voices.
+#
+# device : 'auto' choisit cuda > mps > cpu. Force 'cuda' sur ROCm (PyTorch
+# expose ROCm via l'API cuda). Override 'cpu' pour debug.
+#
+# num_step : steps de diffusion. 8 = rapide (CPU acceptable), 16 = qualité,
+# 32 = max. Sur CPU Strix Halo, 8 ramène ~6.5s/phrase à ~3.5s pour une phrase
+# courte sans dégradation perceptible. Bumper à 16 dès qu'on a du GPU réel.
+omnivoice:
+  enabled: false
+  voices_dir: ~/.local/share/brain-daemon/voices
+  device: auto
+  num_step: 8
+  guidance_scale: 2.0
+  # model_path: ~/.cache/omnivoice          # override le from_pretrained par défaut

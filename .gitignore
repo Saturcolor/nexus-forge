@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+**/node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Builds
+dist/
+**/dist/
+build/
+*.tsbuildinfo
+**/frontend/dist/
+
+# Local config & secrets — NEVER commit
+*.local.yml
+*.local.yaml
+*.local.json
+config.yaml
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.development.local
+
+# Data & logs
+*.log
+logs/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.duckdb
+*.duckdb.wal
+
+# Demo runtime data (created when running the demo)
+**/.demo-data/
+demo-models/
+
+# Syncthing (file-sync metadata — not part of the repo)
+.stfolder/
+**/.stfolder/
+.stignore
+**/.stignore
+
+# OS
+.DS_Store
+**/.DS_Store

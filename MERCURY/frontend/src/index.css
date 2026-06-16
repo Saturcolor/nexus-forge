@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/*
+ * NEXUS / Mastermind semantic palette (Mercury V2).
+ * V1 components use literal Tailwind names (neutral-950, blue-600, …) and are
+ * unaffected; the V2 shell consumes these semantic tokens via `bg-card`,
+ * `border-border`, `text-foreground`, etc. Tailwind v4 auto-generates the
+ * matching utilities from any `--color-*` declared inside `@theme`.
+ */
+@theme {
+  --color-background:           #0a0e14;
+  --color-foreground:           #B3B1AD;
+  --color-card:                 #0d1117;
+  --color-card-foreground:      #B3B1AD;
+  --color-primary:              #39BAE6;
+  --color-primary-foreground:   #0a0e14;
+  --color-secondary:            #151b23;
+  --color-secondary-foreground: #B3B1AD;
+  --color-muted:                #151b23;
+  --color-muted-foreground:     #6c7380;
+  --color-destructive:          #FF3333;
+  --color-border:               #1e2530;
+  --color-input:                #1e2530;
+  --color-ring:                 #39BAE6;
+  --color-theme-green:          #7FD962;
+  --color-theme-red:            #FF3333;
+  --color-theme-orange:         #FF8F40;
+  --color-theme-purple:         #D2A6FF;
+  --color-theme-amber:          #F59E0B;
+}
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* Scoped scrollbar — only inside the V2 shell to avoid changing V1 visuals. */
+.mercury-v2 ::-webkit-scrollbar       { width: 6px; height: 6px; }
+.mercury-v2 ::-webkit-scrollbar-track { background: transparent; }
+.mercury-v2 ::-webkit-scrollbar-thumb {
+  background: #1e2530;
+  border-radius: 3px;
+}
+.mercury-v2 ::-webkit-scrollbar-thumb:hover { background: #2d3848; }
+
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes mercury-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "lm_studio_on_off_only": {
+    "models": []
+  },
+  "settings": {},
+  "users": null,
+  "model_mapping": {},
+  "model_routes": null,
+  "provider_priority": null,
+  "model_priority": null,
+  "model_categories": {},
+  "model_category_order": [],
+  "ollama_template_configured_by_model": {},
+  "llamacpp_templates": {},
+  "model_schedules": {},
+  "active_slot": null,
+  "schedule_run_history": [],
+  "brain_settings": {
+    "thermal_auto_start": false,
+    "perf_mode": null,
+    "thermal_thresholds": {
+      "throttle_start_c": 75,
+      "throttle_full_c": 90,
+      "emergency_c": 95,
+      "resume_c": 60
+    }
+  }
+}

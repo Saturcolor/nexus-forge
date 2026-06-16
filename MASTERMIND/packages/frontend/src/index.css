@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Default theme variables (midnight) — overridden at runtime by ThemeContext */
+:root {
+  --color-background:          #0a0e14;
+  --color-foreground:          #B3B1AD;
+  --color-card:                #0d1117;
+  --color-card-foreground:     #B3B1AD;
+  --color-primary:             #39BAE6;
+  --color-primary-foreground:  #0a0e14;
+  --color-secondary:           #151b23;
+  --color-secondary-foreground:#B3B1AD;
+  --color-muted:               #151b23;
+  --color-muted-foreground:    #6c7380;
+  --color-destructive:         #FF3333;
+  --color-border:              #1e2530;
+  --color-input:               #1e2530;
+  --color-ring:                #39BAE6;
+  --color-green:               #7FD962;
+  --color-red:                 #FF3333;
+  --color-orange:              #FF8F40;
+  --color-purple:              #D2A6FF;
+  --color-scrollbar:           #1e2530;
+  --color-scrollbar-hover:     #2d3848;
+}
+
+html {
+  color-scheme: dark;
+}
+
+html, body, #root {
+  height: 100%;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-hover);
+}
+
+/* Utility : conteneurs scrollables horizontalement (tab bars, chips rows)
+   où la barre de scroll est visuellement parasite. Utilisée déjà dans
+   AgentDetailPage et étendue à SchedulerPage. */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}

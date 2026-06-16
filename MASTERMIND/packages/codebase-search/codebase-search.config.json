@@ -1,0 +1,47 @@
+{
+  "apiKey": "<YOUR_OPENAI_API_KEY>",
+  "extensions": [
+    ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+    ".py", ".pyx", ".pyi",
+    ".cs", ".csx",
+    ".java", ".kt", ".scala",
+    ".go", ".rs", ".rb", ".php",
+    ".swift", ".m", ".mm",
+    ".c", ".cpp", ".cc", ".h", ".hpp",
+    ".sql", ".prisma", ".graphql",
+    ".json", ".yaml", ".yml", ".toml",
+    ".md", ".mdx", ".rst",
+    ".sh", ".bash", ".zsh", ".ps1",
+    ".dockerfile", ".tf", ".hcl"
+  ],
+  "excludeDirs": [
+    "node_modules", ".git", ".svn", ".hg",
+    "build", "dist", "out", "target",
+    ".next", ".nuxt", ".output",
+    "coverage", ".coverage", "htmlcov",
+    "vendor", "venv", ".venv", "__pycache__",
+    ".idea", ".vscode", ".vs",
+    "logs", "tmp", "temp", ".tmp",
+    "bin", "obj", ".gradle", ".mvn"
+  ],
+  "excludeFiles": [
+    "*.min.js", "*.min.css", "*.bundle.js",
+    "*.map", "*.lock", "package-lock.json",
+    "*.pyc", "*.pyo", "*.class",
+    "*.o", "*.a", "*.so", "*.dll", "*.exe",
+    "*.log", "*.pid", "*.seed", "*.pid.lock",
+    ".DS_Store", "Thumbs.db", "desktop.ini"
+  ],
+  "chunkSize": 1500,
+  "chunkOverlap": 200,
+  "embeddingModel": "qwen/qwen3-embedding-8b",
+  "embeddingDimensions": 4096,
+  "maxConcurrentFiles": 50,
+  "useTreeSitter": true,
+  "candidatePool": 80,
+  "rerankTopK": 30,
+  "vectorWeight": 0.55,
+  "lexicalWeight": 0.3,
+  "structuralWeight": 0.15,
+  "debugScoring": false
+}

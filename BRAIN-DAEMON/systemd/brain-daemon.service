@@ -1,0 +1,16 @@
+[Unit]
+Description=Brain Daemon — LLM models + stats + thermal + perf + updates
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/llamacpp-daemon
+Environment=PATH=/opt/llamacpp-daemon/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/root
+ExecStart=/opt/llamacpp-daemon/venv/bin/uvicorn daemon:app --host 0.0.0.0 --port 4321 --log-level info
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

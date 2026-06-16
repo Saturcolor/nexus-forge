@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/shared" },
+    { "path": "packages/codebase-search" },
+    { "path": "packages/backend" }
+  ]
+}
