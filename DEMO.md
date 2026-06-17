@@ -12,12 +12,13 @@ and a Postgres — or just use Docker (below).
 
 ## Quick start — Docker (the whole stack, one command)
 
-If you have Docker, this builds and runs Postgres + Mercury + Mastermind together with
-a fake LLM — no GPU, no keys, no host Python/Node needed.
+If you have Docker, this builds and runs Postgres + Mercury + Mastermind + brain-daemon
+together with a fake LLM — no GPU, no keys, no host Python/Node needed.
 
 ```bash
-./run-demo.sh          # build + start, waits for ready, then prints the URLs
+./run-demo.sh          # build + start, wait until ready, then open the web UIs
 ./run-demo.sh down     # stop and remove
+NO_OPEN=1 ./run-demo.sh  # start without opening browser tabs
 ```
 
 Equivalent without the helper:
@@ -36,6 +37,7 @@ Both backends also serve their **web UI** on the same port — open them in a br
 |---|---|---|---|
 | **Mastermind** | http://localhost:3000 | ✅ dashboard | + REST API & WebSocket. The UI auto-authenticates with `demo-key` (baked at build). `/api/*` via curl needs `Authorization: Bearer demo-key`. |
 | **Mercury** | http://localhost:17890 | ✅ admin UI | + OpenAI-compatible API. No auth in demo. |
+| **brain-daemon** | http://localhost:4321 | — (API only) | demo mode — `/health`, `/v1/*`, `/mgmt/*`. Standalone (not in the chat path; Mercury serves the fake LLM). |
 | Postgres | internal only | — | not published to the host |
 
 ### Test it
@@ -59,8 +61,10 @@ curl -N http://localhost:17890/v1/chat/completions \
   -d '{"model":"demo","stream":true,"messages":[{"role":"user","content":"hi"}]}'
 ```
 
-`brain-daemon` is not in the compose (AMD Strix Halo hardware-specific — see section 2
-for its standalone demo). The sections below run each component **manually** instead.
+`brain-daemon` now runs in the compose too (demo mode, curl-able at :4321). In the demo,
+Mercury serves the fake LLM itself, so brain-daemon runs **standalone** rather than in the
+chat request path (outside demo it is AMD Strix Halo hardware-specific — see section 2 and
+`BRAIN-DAEMON/README.md`). The sections below run each component **manually** instead.
 
 ---
 

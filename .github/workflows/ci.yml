@@ -1,0 +1,143 @@
+name: CI
+
+# Boots each component's DEMO mode (no GPU / DB / cloud keys / model files) and curl-smoke-tests
+# the real request paths, plus runs the unit suites. The demo harness is the same one documented
+# in DEMO.md — CI just automates "does it actually boot and answer?".
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mercury:
+    name: Mercury — unit + demo smoke (py ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]   # 3.10 is the documented floor (X | None runtime annotations)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install dependencies
+        working-directory: MERCURY
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Unit tests (routing)
+        working-directory: MERCURY
+        run: python -m unittest tests.routing.test_router -v
+      - name: Demo boot + curl smoke
+        working-directory: MERCURY
+        run: |
+          set -euo pipefail
+          MERCURY_DEMO_MODE=1 MERCURY_CONFIG=../demo/mercury.demo.yaml python main.py &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:17890/api/tags >/dev/null && break; sleep 1; done
+          echo "→ /api/tags";       curl -sf http://127.0.0.1:17890/api/tags >/dev/null
+          echo "→ chat (non-stream)"; curl -sf http://127.0.0.1:17890/v1/chat/completions \
+            -H 'Content-Type: application/json' \
+            -d '{"model":"demo","messages":[{"role":"user","content":"hi"}]}' | grep -q '"choices"'
+          echo "→ chat (SSE stream)";  curl -sf -N http://127.0.0.1:17890/v1/chat/completions \
+            -H 'Content-Type: application/json' \
+            -d '{"model":"demo","stream":true,"messages":[{"role":"user","content":"hi"}]}' | grep -q 'data:'
+          echo "→ embeddings";       curl -sf http://127.0.0.1:17890/v1/embeddings \
+            -H 'Content-Type: application/json' \
+            -d '{"model":"demo","input":["hello","world"]}' | grep -q '"embedding"'
+          echo "Mercury demo smoke OK"
+
+  brain-daemon:
+    name: brain-daemon — unit + demo smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: BRAIN-DAEMON
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Unit tests (thermal slew-rate + constants)
+        working-directory: BRAIN-DAEMON
+        run: python -m unittest tests.test_thermal -v
+      - name: Demo boot + curl smoke
+        working-directory: BRAIN-DAEMON
+        run: |
+          set -euo pipefail
+          BRAIN_DEMO_MODE=1 BRAIN_CONFIG=../demo/brain.demo.yaml \
+            uvicorn main:app --host 127.0.0.1 --port 4321 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4321/health >/dev/null && break; sleep 1; done
+          echo "→ /health";      curl -sf http://127.0.0.1:4321/health | grep -q demo_mode
+          echo "→ /v1/models";   curl -sf http://127.0.0.1:4321/v1/models >/dev/null
+          echo "→ /mgmt/models"; curl -sf http://127.0.0.1:4321/mgmt/models >/dev/null
+          echo "→ chat";         curl -sf http://127.0.0.1:4321/v1/chat/completions \
+            -H 'Content-Type: application/json' \
+            -d '{"model":"demo/qwen-demo-7b","messages":[{"role":"user","content":"hi"}]}' | grep -q '"choices"'
+          echo "brain-daemon demo smoke OK"
+
+  mastermind:
+    name: Mastermind — build + unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"          # Node 24+ hits an undici dispatcher incompat in the demo path (DEMO.md)
+          cache: npm
+          cache-dependency-path: MASTERMIND/package-lock.json
+      - name: Install
+        working-directory: MASTERMIND
+        run: npm ci
+      - name: Build workspace deps (shared, codebase-search)
+        working-directory: MASTERMIND
+        run: |
+          npm run build --workspace=packages/shared
+          npm run build --workspace=@mastermind/codebase-search
+      - name: Build frontend (tsc -b && vite build)
+        working-directory: MASTERMIND
+        run: npm run build:frontend
+      - name: Typecheck backend (tsc -b)
+        working-directory: MASTERMIND
+        run: npm run build --workspace=packages/backend
+      - name: Unit tests (delivery resolution + toAiMessage rebuild)
+        working-directory: MASTERMIND
+        run: npm run test --workspace=packages/backend
+
+  e2e-docker:
+    name: End-to-end — Mastermind → Mercury (Docker compose)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build + start the demo stack
+        run: docker compose -f docker-compose.demo.yml up -d --build
+      - name: Wait for readiness + full-pipeline curl
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/health/ready >/dev/null && break; sleep 2; done
+          echo "→ /health/ready"; curl -sf http://localhost:3000/health/ready | grep -Eq '"ok": ?true'
+          echo "→ Mastermind → Mercury (fake LLM) round-trip"
+          curl -sf -X POST http://localhost:3000/api/chat/assistant \
+            -H 'Authorization: Bearer demo-key' -H 'Content-Type: application/json' \
+            -d '{"content":"hello"}' | grep -Eq '"ok": ?true'
+          echo "E2E OK"
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.demo.yml logs --no-color | tail -200
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.demo.yml down -v
