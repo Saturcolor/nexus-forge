@@ -8,6 +8,16 @@ import os
 import asyncio
 from pathlib import Path
 
+if sys.version_info < (3, 10):
+    sys.stderr.write(
+        "Mercury requires Python 3.10+ — the code uses `X | None` runtime type "
+        "annotations that raise TypeError at import time under 3.9.\n"
+        f"Detected Python {sys.version_info.major}.{sys.version_info.minor}. "
+        "macOS ships 3.9 as `python3`; create a venv with a newer interpreter "
+        "(see DEMO.md).\n"
+    )
+    raise SystemExit(1)
+
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))

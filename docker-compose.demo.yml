@@ -8,8 +8,10 @@
 #     -d '{"content":"hello"}'
 #
 # A chat request flows Mastermind -> Mercury (DEMO_MODE, fake LLM) -> reply.
-# brain-daemon is not included (it is AMD Strix Halo hardware-specific — see DEMO.md
-# for its standalone demo). memoryStore is off so no pgvector is needed.
+# brain-daemon also runs here in demo mode (curl-able at :4321) so the whole project comes up in
+# one command; in the demo, Mercury serves the fake LLM itself, so brain-daemon runs standalone
+# rather than in the request path (outside demo it is AMD Strix Halo hardware-specific — see
+# BRAIN-DAEMON/README.md). memoryStore is off so no pgvector is needed.
 
 services:
   postgres:
@@ -30,6 +32,13 @@ services:
       MERCURY_DEMO_MODE: "1"
     ports:
       - "17890:17890"
+
+  brain-daemon:
+    build: ./BRAIN-DAEMON
+    environment:
+      BRAIN_DEMO_MODE: "1"
+    ports:
+      - "4321:4321"
 
   mastermind:
     build: ./MASTERMIND

@@ -45,6 +45,9 @@ demo-models/
 .stignore
 **/.stignore
 
+# Competition research clones — local only, never publish
+ressources/
+
 # OS
 .DS_Store
 **/.DS_Store
