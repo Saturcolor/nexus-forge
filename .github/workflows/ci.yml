@@ -45,16 +45,19 @@ jobs:
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:17890/api/tags >/dev/null && break; sleep 1; done
-          echo "→ /api/tags";       curl -sf http://127.0.0.1:17890/api/tags >/dev/null
-          echo "→ chat (non-stream)"; curl -sf http://127.0.0.1:17890/v1/chat/completions \
+          # Capture each response, THEN grep it. Piping `curl | grep -q` lets grep close the pipe on
+          # the first match — which makes a streaming `curl -N` exit 23 (SIGPIPE) and, under
+          # `set -o pipefail`, fails the step even though the request itself succeeded.
+          echo "→ /api/tags";        curl -sf http://127.0.0.1:17890/api/tags >/dev/null
+          echo "→ chat (non-stream)"; resp=$(curl -sf http://127.0.0.1:17890/v1/chat/completions \
             -H 'Content-Type: application/json' \
-            -d '{"model":"demo","messages":[{"role":"user","content":"hi"}]}' | grep -q '"choices"'
-          echo "→ chat (SSE stream)";  curl -sf -N http://127.0.0.1:17890/v1/chat/completions \
+            -d '{"model":"demo","messages":[{"role":"user","content":"hi"}]}'); grep -q '"choices"' <<<"$resp"
+          echo "→ chat (SSE stream)";  resp=$(curl -sf -N http://127.0.0.1:17890/v1/chat/completions \
             -H 'Content-Type: application/json' \
-            -d '{"model":"demo","stream":true,"messages":[{"role":"user","content":"hi"}]}' | grep -q 'data:'
-          echo "→ embeddings";       curl -sf http://127.0.0.1:17890/v1/embeddings \
+            -d '{"model":"demo","stream":true,"messages":[{"role":"user","content":"hi"}]}'); grep -q 'data:' <<<"$resp"
+          echo "→ embeddings";        resp=$(curl -sf http://127.0.0.1:17890/v1/embeddings \
             -H 'Content-Type: application/json' \
-            -d '{"model":"demo","input":["hello","world"]}' | grep -q '"embedding"'
+            -d '{"model":"demo","input":["hello","world"]}'); grep -q '"embedding"' <<<"$resp"
           echo "Mercury demo smoke OK"
 
   brain-daemon:
